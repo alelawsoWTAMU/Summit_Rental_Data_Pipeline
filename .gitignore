@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Django sensitive data
+# db.sqlite3 intentionally committed for Render demo deployment
+# db.sqlite3
+db.sqlite3-journal
+local_settings.py
+.env
+
+# VS Code / OS files
+.vscode/
+.DS_Store
+Thumbs.db

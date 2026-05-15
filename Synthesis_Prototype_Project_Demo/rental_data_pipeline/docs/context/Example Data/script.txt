@@ -1,0 +1,84 @@
+using ClosedXML;
+using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Wordprocessing;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
+
+namespace Rental_Vendor_Insert
+{
+    internal class GetValues
+    {
+        public static void GetValuesFromCSV()
+        {
+            try
+            {
+                var url = "[HIDDEN — internal plant network share]";
+                var wb = new XLWorkbook(url);
+                var ws1 = wb.Worksheet(1);
+                var rows = ws1.RangeUsed().RowsUsed();
+                int count = 0;
+
+                foreach (var row in rows)
+                {
+                    count++;
+                    var year = row.Cell(1).Value.ToString();
+                    var weekNum = row.Cell(2).Value;
+                    var date = row.Cell(3).Value;
+                    var vendor = row.Cell(4).Value;
+                    var equipmentType = row.Cell(5).Value;
+                    var equipmentNumber = row.Cell(6).Value;
+                    var equipmentDesc = row.Cell(7).Value;
+                    var startDate = row.Cell(8).Value;
+                    var endDate = row.Cell(9).Value;
+                    var purchaseOrder = row.Cell(10).Value;
+                    var serviceNowNumber = row.Cell(11).Value;
+                    var monthlyCost = row.Cell(12).Value;
+                    var comments = row.Cell(13).Value;
+
+                    var connectionString = "[HIDDEN — internal plant SQL Server connection string]";
+                    var insertSatement = "INSERT INTO [HIDDEN].[dbo].[BH_Rentals_Weekly] ([Year],[Week_Number], [Date], [Rental_Company],[Equipment_Type],[Equipment_Number],[Equipment_Description],[Date_Rental_Started],[Projected_End_Date],[PO_Number],[Service_Now_Request_Number],[Monthly_Rate ($)],[Comments])" +
+                        " VALUES ('" + year + "', '" + 
+                        weekNum + "', '" +
+                        date + "', '" +
+                        vendor + "', '" +
+                        equipmentType + "', '" +
+                        equipmentNumber + "', '" + 
+                        equipmentDesc + "', '" + 
+                        startDate + "', '" + 
+                        endDate + "', '" + 
+                        purchaseOrder + "', '" + 
+                        serviceNowNumber + "', '" +
+                        monthlyCost + "', '" + 
+                        comments + "');";
+                    //Console.WriteLine(insertSatement);
+                    using (SqlConnection cn = new SqlConnection(connectionString))
+                    {
+                        using (SqlCommand cmd = new SqlCommand())
+                        {
+                            //Define connection
+                            cmd.Connection = cn;
+                            //Open connection
+                            cn.Open();
+                            SqlCommand commandInsert = new SqlCommand(insertSatement, cn);
+                            commandInsert.ExecuteNonQuery();
+                            cn.Close();
+                        }
+                    }
+                }
+                Console.WriteLine($"Successfully inserted {count.ToString()} rows.");
+            }
+
+            catch (Exception ex)
+            {
+                Rental_Vendor_Insert.Email.SendEmail("Issue in Rental Vendor Insert -- Get Values from CSV", ex.Message);
+            }
+        }
+    }
+}

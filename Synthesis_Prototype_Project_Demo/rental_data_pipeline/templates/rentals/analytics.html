@@ -1,0 +1,2108 @@
+{% load i18n humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analytics — Rental Data Pipeline</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue-950: #061c33;
+      --blue-900: #0b2a4a;
+      --blue-800: #0f3460;
+      --blue-700: #134a80;
+      --blue-600: #195f9d;
+      --green-700: #166b42;
+      --green-600: #1f8a57;
+      --green-500: #2ea86b;
+      --green-400: #48c98a;
+      --amber:     #d97706;
+      --red:       #b91c1c;
+      --slate-50:  #f7fafd;
+      --slate-100: #eef3f9;
+      --slate-200: #dce7f0;
+      --slate-400: #8a9ab0;
+      --slate-600: #4a6278;
+      --slate-800: #1f2d3d;
+      --white:     #ffffff;
+    }
+
+    html.dark-ui {
+      --blue-950: #050b14;
+      --blue-900: #0a1425;
+      --blue-800: #0f1f38;
+      --blue-700: #1d4ed8;
+      --blue-600: #3b82f6;
+      --green-700: #14532d;
+      --green-600: #166534;
+      --green-500: #22c55e;
+      --green-400: #4ade80;
+      --amber:     #f59e0b;
+      --red:       #ef4444;
+      --slate-50:  #0f172a;
+      --slate-100: #111827;
+      --slate-200: #1f2937;
+      --slate-400: #94a3b8;
+      --slate-600: #cbd5e1;
+      --slate-800: #e2e8f0;
+      --white:     #0b1220;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 15px;
+      color: var(--slate-800);
+      background: var(--slate-100);
+    }
+
+    /* ═══════════════════════════════════════
+       TOPBAR
+    ═══════════════════════════════════════ */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 58px;
+      background: var(--blue-900);
+      border-bottom: 3px solid var(--green-500);
+      box-shadow: 0 2px 12px rgba(4,16,30,.35);
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .topbar-logo {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--blue-600), var(--green-600));
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .topbar-logo svg { display: block; }
+    .topbar-divider {
+      width: 1px; height: 22px;
+      background: rgba(255,255,255,.18);
+    }
+    .topbar-kicker {
+      font-size: 10px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--green-400);
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    .topbar-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: -.01em;
+      line-height: 1;
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .topbar-user {
+      font-size: .78rem;
+      color: rgba(255,255,255,.55);
+      padding-right: 6px;
+    }
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: .8rem;
+      font-weight: 600;
+      text-decoration: none;
+      letter-spacing: .02em;
+      border: 1.5px solid rgba(255,255,255,.22);
+      color: rgba(255,255,255,.82);
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .nav-btn:hover {
+      background: rgba(255,255,255,.08);
+      border-color: #60a5fa;
+      color: #bfdbfe;
+    }
+    .nav-btn.primary {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: var(--white);
+    }
+    .nav-btn.primary:hover {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: var(--white);
+    }
+    .theme-toggle {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1.5px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.9);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .theme-toggle:hover { background: rgba(255,255,255,.12); border-color: #60a5fa; color: #bfdbfe; }
+    .theme-toggle .sun { display: none; }
+    html.dark-ui .theme-toggle .sun { display: inline; }
+    html.dark-ui .theme-toggle .moon { display: none; }
+
+    /* ═══════════════════════════════════════
+       PAGE HERO  (page-level title strip)
+    ═══════════════════════════════════════ */
+    .page-hero {
+      background: linear-gradient(100deg, var(--blue-800) 0%, var(--blue-900) 55%, var(--green-700) 100%);
+      padding: 32px 40px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        130deg,
+        rgba(255,255,255,.03) 0, rgba(255,255,255,.03) 1px,
+        transparent 1px, transparent 24px
+      );
+      pointer-events: none;
+    }
+    .page-hero-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 1320px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .hero-export-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 14px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.35);
+      color: #fff;
+      font-size: .82rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background .15s, border-color .15s, transform .1s;
+    }
+    .hero-export-btn:hover {
+      background: rgba(255,255,255,.2);
+      border-color: #bfdbfe;
+      transform: translateY(-1px);
+    }
+    .page-hero h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -.02em;
+      margin-bottom: 4px;
+    }
+    .page-hero p {
+      font-size: .85rem;
+      color: rgba(255,255,255,.6);
+    }
+
+    /* ═══════════════════════════════════════
+       MAIN CONTENT
+    ═══════════════════════════════════════ */
+    .page-body {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px 32px 56px;
+    }
+
+    /* ── Stat strip ── */
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 20px 22px 18px;
+      border-top: 3px solid var(--blue-600);
+      box-shadow: 0 1px 4px rgba(8,24,40,.08), 0 4px 16px rgba(8,24,40,.06);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stat-card.green { border-top-color: var(--green-600); }
+    .stat-card.amber { border-top-color: var(--amber); }
+    .stat-label {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--slate-400);
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--slate-800);
+      line-height: 1;
+      letter-spacing: -.02em;
+    }
+    .stat-sub {
+      font-size: .75rem;
+      color: var(--slate-400);
+    }
+
+    .executive-strip {
+      display: grid;
+      grid-template-columns: 1.1fr repeat(3, minmax(180px, 1fr));
+      gap: 0;
+      background: #9fc89e;
+      border: 1px solid rgba(7, 49, 28, .3);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .exec-card {
+      min-height: 118px;
+      padding: 16px 18px;
+      border-right: 1px solid rgba(7, 49, 28, .35);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: rgba(255,255,255,.03);
+    }
+    .exec-card:last-child { border-right: none; }
+    .exec-week-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 2.05rem;
+      line-height: 1;
+      letter-spacing: .03em;
+      color: #071a10;
+    }
+    .exec-week-year {
+      margin-top: 8px;
+      font-size: 2.9rem;
+      line-height: 1;
+      color: #071a10;
+    }
+    .exec-number {
+      font-size: 2.45rem;
+      line-height: 1;
+      font-weight: 700;
+      color: #06150e;
+      letter-spacing: -.03em;
+    }
+    .exec-caption {
+      margin-top: 8px;
+      font-size: 1.02rem;
+      color: #173322;
+      letter-spacing: .01em;
+    }
+
+    .slicer-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr)) 180px;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+    .slicer {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .slicer label {
+      font-size: .74rem;
+      font-weight: 700;
+      color: var(--slate-600);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .slicer input,
+    .slicer select {
+      width: 100%;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--slate-200);
+      background: #fff;
+      padding: 0 10px;
+      font-size: .84rem;
+      color: var(--slate-700);
+    }
+    .slicer-input-wrap {
+      position: relative;
+    }
+    .slicer-input-wrap input {
+      padding-right: 28px;
+    }
+    .slicer-clear {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--slate-200);
+      border: none;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: .72rem;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--slate-600);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .slicer-clear:hover {
+      background: var(--slate-300);
+      color: var(--slate-800);
+    }
+    .slicer-clear.visible {
+      display: flex;
+    }
+
+    /* ── Tab nav ── */
+    .tab-nav {
+      display: flex;
+      gap: 2px;
+      background: var(--white);
+      border: 1px solid var(--slate-200);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 20px;
+      width: fit-content;
+      box-shadow: 0 1px 4px rgba(8,24,40,.06);
+    }
+    .tab-nav.secondary {
+      margin-top: 2px;
+      margin-bottom: 22px;
+    }
+    .tab-btn {
+      padding: 8px 20px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--slate-600);
+      background: none;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      letter-spacing: .02em;
+      transition: background .15s, color .15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--blue-700); background: var(--slate-100); }
+    .tab-btn.active {
+      background: linear-gradient(95deg, var(--blue-700), var(--blue-600));
+      color: var(--white);
+    }
+
+    @media (max-width: 1100px) {
+      .executive-strip { grid-template-columns: 1fr 1fr; }
+      .exec-card { border-right: 1px solid rgba(7, 49, 28, .35); border-bottom: 1px solid rgba(7, 49, 28, .35); }
+      .exec-card:nth-child(2n) { border-right: none; }
+      .exec-card:nth-last-child(-n+2) { border-bottom: none; }
+      .slicer-row { grid-template-columns: repeat(2, minmax(170px, 1fr)); }
+    }
+
+    @media (max-width: 700px) {
+      .executive-strip { grid-template-columns: 1fr; }
+      .exec-card { border-right: none; border-bottom: 1px solid rgba(7, 49, 28, .35); }
+      .exec-card:last-child { border-bottom: none; }
+      .slicer-row { grid-template-columns: 1fr; }
+    }
+
+    /* ── Chart panels ── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .chart-card {
+      background: var(--white);
+      border-radius: 14px;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 1px 4px rgba(8,24,40,.07), 0 6px 24px rgba(8,24,40,.05);
+      overflow: hidden;
+    }
+    .chart-header {
+      padding: 20px 26px 16px;
+      border-bottom: 1px solid var(--slate-100);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .chart-header-left {}
+    .chart-title {
+      font-size: .92rem;
+      font-weight: 800;
+      color: var(--blue-900);
+      letter-spacing: .01em;
+      text-transform: uppercase;
+    }
+    .chart-subtitle {
+      font-size: .75rem;
+      color: var(--slate-400);
+      margin-top: 3px;
+    }
+    .chart-pill {
+      flex-shrink: 0;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      background: var(--slate-100);
+      color: var(--slate-600);
+      border: 1px solid var(--slate-200);
+    }
+    .chart-body { padding: 20px; }
+    .plotly-chart { width: 100%; min-height: 400px; }
+    .chart-body { position: relative; }
+    .panel-spinner {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.82); z-index: 10; border-radius: 6px;
+      opacity: 0; transition: opacity 0.12s; pointer-events: none;
+    }
+    .panel-spinner.visible { opacity: 1; }
+    .panel-spinner::after {
+      content: ''; width: 38px; height: 38px;
+      border: 3px solid #dbeafe; border-top-color: #2383e2;
+      border-radius: 50%; animation: ps-spin 0.55s linear infinite;
+    }
+    @keyframes ps-spin { to { transform: rotate(360deg); } }
+    .cost-filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 0 20px 14px;
+      flex-wrap: wrap;
+    }
+    .cost-periods {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .cost-period-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--slate-200);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--slate-600);
+      cursor: pointer;
+      font-size: .74rem;
+      font-weight: 700;
+    }
+    .cost-period-btn.active {
+      background: var(--blue-700);
+      border-color: var(--blue-700);
+      color: #fff;
+    }
+    .cost-range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 260px;
+      flex: 1;
+      justify-content: flex-end;
+    }
+    .cost-range-wrap label {
+      font-size: .74rem;
+      font-weight: 700;
+      color: var(--slate-500);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .cost-range-wrap input[type="range"] {
+      width: 180px;
+    }
+    .cost-range-value {
+      font-size: .76rem;
+      color: var(--blue-700);
+      font-weight: 700;
+      min-width: 82px;
+      text-align: right;
+    }
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .comparison-card {
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .comparison-card-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--slate-100);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .comparison-card-title {
+      font-size: .86rem;
+      font-weight: 800;
+      color: var(--blue-900);
+      text-transform: uppercase;
+    }
+    .comparison-empty {
+      padding: 22px 16px;
+      color: var(--slate-500);
+      font-size: .82rem;
+    }
+    .comparison-delta-card {
+      margin: 0 0 14px 0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #1e3a8a;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: .84rem;
+      line-height: 1.45;
+      font-weight: 600;
+    }
+    .comparison-delta-card.up {
+      background: #ecfdf3;
+      border-color: #15803d;
+      color: #166534;
+    }
+    .comparison-delta-card.down {
+      background: #fef2f2;
+      border-color: #b91c1c;
+      color: #991b1b;
+    }
+    .comparison-delta-card.flat {
+      background: #f8fafc;
+      border-color: #334155;
+      color: #334155;
+    }
+    .comparison-card .data-table tbody tr td {
+      background: var(--white);
+    }
+    .comparison-card .data-table tbody tr:nth-child(even) td {
+      background: var(--white);
+    }
+    @media (max-width: 900px) {
+      .comparison-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── RvB table ── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .78rem;
+      table-layout: fixed;
+    }
+    .data-table thead tr {
+      background: var(--blue-900);
+    }
+    .data-table th {
+      color: var(--white);
+      font-weight: 700;
+      padding: 9px 8px;
+      text-align: left;
+      letter-spacing: .04em;
+      font-size: .67rem;
+      text-transform: uppercase;
+      white-space: normal;
+      word-break: break-word;
+      vertical-align: bottom;
+    }
+    /* RvB column widths — must sum to 100% */
+    #panel-rvb .data-table th:nth-child(1)  { width: 9%; }    /* Vendor */
+    #panel-rvb .data-table th:nth-child(2)  { width: 8%; }    /* Equip ID */
+    #panel-rvb .data-table th:nth-child(3)  { width: 13%; }   /* Description */
+    #panel-rvb .data-table th:nth-child(4)  { width: 3%; }    /* Qty */
+    #panel-rvb .data-table th:nth-child(5)  { width: 9%; }    /* Monthly Rate */
+    #panel-rvb .data-table th:nth-child(6)  { width: 8%; }    /* Months on Rent */
+    #panel-rvb .data-table th:nth-child(7)  { width: 10%; }   /* Total Paid */
+    #panel-rvb .data-table th:nth-child(8)  { width: 9%; }    /* Est. Buy Price */
+    #panel-rvb .data-table th:nth-child(9)  { width: 9%; }    /* Est. Monthly Maint */
+    #panel-rvb .data-table th:nth-child(10) { width: 11%; }   /* Status */
+    #panel-rvb .data-table th:nth-child(11) { width: 11%; }   /* Reasoning */
+    .data-table td {
+      padding: 8px 8px;
+      border-bottom: 1px solid var(--slate-100);
+      color: var(--slate-800);
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+    .data-table tbody tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:nth-child(even) td { background: var(--slate-50); }
+    .data-table tbody tr:hover td { background: #e3edf7; }
+    .cost-cell { font-weight: 700; color: var(--blue-700); }
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 12px;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      white-space: nowrap;
+    }
+    .badge-red   { background: #fef2f2; color: var(--red);   border: 1px solid #fca5a5; }
+    .badge-green { background: #f0fdf6; color: var(--green-700); border: 1px solid #a7f3d0; }
+
+    /* ── Raw Ledger combined-header inputs ── */
+    th.lcf-th { padding: 5px 6px; vertical-align: middle; }
+    th.lcf-th .lcol-filter {
+      display: block; width: 100%; box-sizing: border-box;
+      padding: 5px 6px; border: 1px solid rgba(255,255,255,.2); border-radius: 3px;
+      background: rgba(255,255,255,.08); color: #fff;
+      font-size: .6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; outline: none;
+    }
+    th.lcf-th .lcol-filter::placeholder { color: rgba(255,255,255,.75); font-weight: 700; }
+    th.lcf-th .lcol-filter:focus {
+      border-color: var(--green-400); background: rgba(255,255,255,.14);
+    }
+    th.lcf-th .lcol-filter:focus::placeholder { color: rgba(255,255,255,.35); }
+    .badge-amber { background: #fffbeb; color: var(--amber); border: 1px solid #fcd34d; }
+
+    /* ── Period picker ── */
+    .period-strip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .period-label {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--slate-400);
+    }
+    .period-btns {
+      display: flex;
+      background: var(--white);
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+      box-shadow: 0 1px 3px rgba(8,24,40,.06);
+    }
+    .period-btn {
+      padding: 5px 14px;
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--slate-600);
+      background: none;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      letter-spacing: .02em;
+      transition: background .12s, color .12s;
+      white-space: nowrap;
+    }
+    .period-btn:hover { color: var(--blue-700); background: var(--slate-100); }
+    .period-btn.active { background: var(--blue-700); color: var(--white); }
+  </style>
+</head>
+<body>
+<script>
+(function(){
+  var root=document.documentElement;
+  if(localStorage.getItem('rdp-theme')==='dark') root.classList.add('dark-ui');
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest('#theme-toggle');
+    if(!btn) return;
+    var dark=root.classList.toggle('dark-ui');
+    localStorage.setItem('rdp-theme',dark?'dark':'light');
+  });
+})();
+</script>
+
+<!-- ── Topbar ── -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <path d="M3 14l4-5 3 3 3-4 4 6H3z" fill="rgba(255,255,255,.9)"/>
+        <circle cx="15" cy="5" r="2.5" fill="#48c98a"/>
+      </svg>
+    </div>
+    <div class="topbar-divider"></div>
+    <div>
+      <div class="topbar-kicker">Rental Data Pipeline</div>
+      <div class="topbar-title">Analytics</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-user">{{ request.user.username }}</span>
+    {% if request.user.profile.role == "admin" %}
+      <a href="/admin/" class="nav-btn">Admin Portal</a>
+    {% else %}
+      <a href="/review/" class="nav-btn">Reviewer Portal</a>
+    {% endif %}
+    <button type="button" id="theme-toggle" class="theme-toggle" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
+      <span class="moon">&#9790;</span><span class="sun">&#9728;</span>
+    </button>
+    <form method="post" action="{% url 'portal_logout' %}" style="margin:0;">
+      {% csrf_token %}
+      <button type="submit" class="nav-btn primary">Sign Out</button>
+    </form>
+  </div>
+</header>
+
+<!-- ── Hero ── -->
+<div class="page-hero">
+  <div class="page-hero-inner">
+    <div>
+      <h1>Analytics Dashboard</h1>
+      <p>Live view of rental spend, vendor compliance, equipment utilization, and rent-vs-buy analysis</p>
+    </div>
+    <a id="export-report-btn" class="hero-export-btn" href="{% url 'analytics_export_report' %}">Export Report (PDF)</a>
+  </div>
+</div>
+
+<div class="page-body">
+
+  <div class="executive-strip">
+    <div class="exec-card">
+      <div class="exec-week-top"><span>Week</span><span id="kpi-week-number">{{ latest_week }}</span></div>
+      <div class="exec-week-year" id="kpi-year-number">{{ latest_year }}</div>
+    </div>
+    <div class="exec-card">
+      <div class="exec-number" id="kpi-equipment-count">{{ latest_equipment_count }}</div>
+      <div class="exec-caption">Count of Equipment</div>
+    </div>
+    <div class="exec-card">
+      <div class="exec-number" id="kpi-week-total">${{ latest_weekly_total|floatformat:2|intcomma }}</div>
+      <div class="exec-caption">Per Week</div>
+    </div>
+    <div class="exec-card">
+      <div class="exec-number" id="kpi-month-total">${{ latest_monthly_total|floatformat:2|intcomma }}</div>
+      <div class="exec-caption">Per Month</div>
+    </div>
+  </div>
+
+  <div class="slicer-row" style="grid-template-columns: repeat(5, minmax(150px, 1fr));">
+    <div class="slicer">
+      <label for="filter-week">Year and Week #</label>
+      <select id="filter-week">
+        <option value="">All</option>
+        {% for w in available_weeks %}
+        <option value="{{ w.cycle_year }}-{{ w.cycle_week }}">{{ w.cycle_year }} (Year) + {{ w.cycle_week }} (Week)</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="slicer">
+      <label for="filter-area">By Department</label>
+      <div class="slicer-input-wrap">
+        <input id="filter-area" type="text" placeholder="Search or select..." list="list-area">
+        <button class="slicer-clear" data-target="filter-area" title="Clear">&times;</button>
+      </div>
+      <datalist id="list-area"></datalist>
+    </div>
+    <div class="slicer">
+      <label for="filter-vendor">By Supplier</label>
+      <div class="slicer-input-wrap">
+        <input id="filter-vendor" type="text" placeholder="Search or select..." list="list-vendor">
+        <button class="slicer-clear" data-target="filter-vendor" title="Clear">&times;</button>
+      </div>
+      <datalist id="list-vendor"></datalist>
+    </div>
+    <div class="slicer">
+      <label for="filter-category">By Rental Category</label>
+      <div class="slicer-input-wrap">
+        <input id="filter-category" type="text" placeholder="Search or select..." list="list-category">
+        <button class="slicer-clear" data-target="filter-category" title="Clear">&times;</button>
+      </div>
+      <datalist id="list-category"></datalist>
+    </div>
+    <div class="slicer">
+      <label for="filter-po">PO_Number</label>
+      <div class="slicer-input-wrap">
+        <input id="filter-po" type="text" placeholder="Search or select..." list="list-po">
+        <button class="slicer-clear" data-target="filter-po" title="Clear">&times;</button>
+      </div>
+      <datalist id="list-po"></datalist>
+    </div>
+  </div>
+
+  <!-- Period picker -->
+  <div class="period-strip">
+    <span class="period-label">View as:</span>
+    <div class="period-btns">
+      <button class="period-btn active" data-period="week" onclick="setPeriod('week')">Week</button>
+      <button class="period-btn" data-period="month"   onclick="setPeriod('month')">Month</button>
+      <button class="period-btn" data-period="quarter" onclick="setPeriod('quarter')">Quarter</button>
+      <button class="period-btn" data-period="year"    onclick="setPeriod('year')">Year</button>
+    </div>
+  </div>
+
+  <!-- Tab nav -->
+  <div class="tab-nav secondary" role="tablist">
+    <button class="tab-btn active" onclick="switchTab(event,'cost')"        role="tab">Cost Over Time</button>
+    <button class="tab-btn"        onclick="switchTab(event,'spend')"        role="tab">By Supplier</button>
+    <button class="tab-btn"        onclick="switchTab(event,'utilization')"  role="tab">By Rental Category</button>
+    <button class="tab-btn"        onclick="switchTab(event,'area')"         role="tab">By Department</button>
+    <button class="tab-btn"        onclick="switchTab(event,'volume')"       role="tab">Volume Over Time</button>
+    <button class="tab-btn"        onclick="switchTab(event,'comparison')"   role="tab">Week Comparison</button>
+    <button class="tab-btn"        onclick="switchTab(event,'compliance')"   role="tab">Compliance</button>
+    <button class="tab-btn"        onclick="switchTab(event,'rvb')"          role="tab">Rent-vs-Buy</button>
+    <button class="tab-btn"        onclick="switchTab(event,'ledger')"       role="tab">Raw Ledger</button>
+  </div>
+
+  <!-- Tab: Area -->
+  <div id="panel-area" class="tab-panel" role="tabpanel">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-left">
+          <div class="chart-title">Cost by Mill Department</div>
+          <div class="chart-subtitle">Spend by steel mill department based on PO assignment</div>
+        </div>
+        <span class="chart-pill">Top 10</span>
+      </div>
+      <div class="chart-body">
+        <div id="chart-area" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Cost Over Time -->
+  <div id="panel-cost" class="tab-panel active" role="tabpanel">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-left">
+          <div class="chart-title">Weekly Cost Over Time</div>
+          <div class="chart-subtitle">Total weekly rental cost across all active master records &mdash; monthly rate &divide; 4 &times; quantity</div>
+        </div>
+        <span class="chart-pill">All Vendors</span>
+      </div>
+      <div id="cost-summary" style="margin:0 0 14px 0;padding:12px 16px;background:#f0f6ff;border-left:4px solid #134a80;border-radius:0 6px 6px 0;font-size:.83rem;color:#1e3a5f;line-height:1.55;"></div>
+      <div class="cost-filter-bar">
+        <div class="cost-periods">
+          <button class="cost-period-btn active" data-cost-period="week" onclick="setCostPeriod('week')">Week</button>
+          <button class="cost-period-btn" data-cost-period="month" onclick="setCostPeriod('month')">Month</button>
+          <button class="cost-period-btn" data-cost-period="quarter" onclick="setCostPeriod('quarter')">Quarter</button>
+          <button class="cost-period-btn" data-cost-period="year" onclick="setCostPeriod('year')">Year</button>
+        </div>
+        <div class="cost-range-wrap">
+          <label for="cost-range">Visible periods</label>
+          <input id="cost-range" type="range" min="1" max="1" value="1" oninput="setCostWindow(this.value)">
+          <div id="cost-range-value" class="cost-range-value">All periods</div>
+        </div>
+      </div>
+      <div class="chart-body">
+        <div id="chart-cost" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Volume Over Time -->
+  <div id="panel-volume" class="tab-panel" role="tabpanel">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-left">
+          <div class="chart-title">Volume Over Time</div>
+          <div class="chart-subtitle">Equipment quantity trend from active weekly snapshots</div>
+        </div>
+        <span class="chart-pill">All Vendors</span>
+      </div>
+      <div class="cost-filter-bar">
+        <div class="cost-periods">
+          <button class="cost-period-btn active" data-volume-period="week" onclick="setVolumePeriod('week')">Week</button>
+          <button class="cost-period-btn" data-volume-period="month" onclick="setVolumePeriod('month')">Month</button>
+          <button class="cost-period-btn" data-volume-period="quarter" onclick="setVolumePeriod('quarter')">Quarter</button>
+          <button class="cost-period-btn" data-volume-period="year" onclick="setVolumePeriod('year')">Year</button>
+        </div>
+      </div>
+      <div class="chart-body">
+        <div id="chart-volume" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Week Comparison -->
+  <div id="panel-comparison" class="tab-panel" role="tabpanel">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-left">
+          <div class="chart-title">Week-over-Week Equipment Changes</div>
+          <div class="chart-subtitle" id="comparison-subtitle">Latest published week compared to the immediately prior published week</div>
+        </div>
+        <span class="chart-pill" id="comparison-pill">2-week view</span>
+      </div>
+      <div class="chart-body">
+        <div id="comparison-summary" style="margin:0 0 16px 0;padding:12px 16px;background:#f8fafc;border-left:4px solid #64748b;border-radius:0 6px 6px 0;font-size:.83rem;color:#334155;line-height:1.55;"></div>
+        <div id="comparison-delta" class="comparison-delta-card flat">Week-over-week dollar delta will appear once two weeks are available.</div>
+        <div class="comparison-grid">
+          <div class="comparison-card">
+            <div class="comparison-card-header" style="background:#f0fdf4;">
+              <div class="comparison-card-title" style="color:#166534;">Placed On-Rent</div>
+              <span class="chart-pill" id="placed-count">0 items</span>
+            </div>
+            <div id="placed-table-wrap"></div>
+          </div>
+          <div class="comparison-card">
+            <div class="comparison-card-header" style="background:#fef2f2;">
+              <div class="comparison-card-title" style="color:#991b1b;">Taken Off Rent</div>
+              <span class="chart-pill" id="removed-count">0 items</span>
+            </div>
+            <div id="removed-table-wrap"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Spend -->
+  <div id="panel-spend" class="tab-panel" role="tabpanel">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-left">
+          <div class="chart-title" id="spend-chart-title">Weekly Cost by Supplier</div>
+          <div class="chart-subtitle" id="spend-chart-subtitle">Monthly rate &divide; 4 &times; quantity from rental_master &mdash; top suppliers in current filter scope</div>
+        </div>
+        <span class="chart-pill">Top 20</span>
+      </div>
+      <div class="chart-body">
+        <div id="chart-spend" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Compliance -->
+  <div id="panel-compliance" class="tab-panel" role="tabpanel">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-left">
+          <div class="chart-title">Vendor Submission Compliance</div>
+          <div class="chart-subtitle">Verified / Late / Pending counts from vendor_audit per vendor</div>
+        </div>
+        <span class="chart-pill">All Vendors</span>
+      </div>
+      <div class="chart-body">
+        <div id="chart-compliance" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Utilization -->
+  <div id="panel-utilization" class="tab-panel" role="tabpanel">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-left">
+          <div class="chart-title">Weekly Cost by Rental Category</div>
+          <div class="chart-subtitle">Top equipment categories by spend in current filter scope</div>
+        </div>
+        <span class="chart-pill">Top 15</span>
+      </div>
+      <div class="chart-body">
+        <div id="chart-utilization" class="plotly-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Rent-vs-Buy -->
+  <div id="panel-rvb" class="tab-panel" role="tabpanel">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-left">
+          <div class="chart-title">Rent-vs-Buy Candidates</div>
+          <div class="chart-subtitle">Monthly rate vs. (ownership + maintenance) threshold &mdash; months on rent &times; monthly rate = total paid; compared against estimated purchase price</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="chart-pill">Top 25</span>
+          <button onclick="downloadRvbCsv()" style="padding:4px 12px;font-size:.75rem;font-weight:600;border:1px solid var(--slate-300);border-radius:6px;background:#fff;color:var(--slate-700);cursor:pointer;">&#8595; Download CSV</button>
+        </div>
+      </div>
+      <div class="chart-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Vendor</th>
+              <th>Equipment ID</th>
+              <th>Description</th>
+              <th style="white-space:nowrap;">Qty</th>
+              <th>Monthly Rate</th>
+              <th>Months on Rent</th>
+              <th>Total Paid to Date</th>
+              <th>Est. Buy Price</th>
+              <th>Est. Monthly Maint.</th>
+              <th>Status</th>
+              <th>Reasoning</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rvb_rows %}
+            <tr data-filter-week="{{ row.cycle_year }}-{{ row.cycle_week }}" data-filter-area="{{ row.mill_department|default:'' }}" data-filter-vendor="{{ row.vendor_name|default:'' }}" data-filter-category="{{ row.equipment_category|default:'' }}" data-filter-po="{{ row.po_number|default:'' }}">
+              <td>{{ row.vendor_name }}</td>
+              <td>{{ row.equipment_id }}</td>
+              <td>{{ row.equipment_description }}</td>
+              <td>{{ row.quantity }}</td>
+              <td style="color:var(--slate-600);" data-monthly="{{ row.rate_daily|floatformat:2 }}">${{ row.rate_daily|floatformat:2|intcomma }}</td>
+              <td style="color:var(--slate-500);text-align:center;">{{ row.months_on_rent }}</td>
+              <td class="cost-cell">${{ row.total_paid|floatformat:2|intcomma }}</td>
+              <td><span style="font-weight:700;color:var(--slate-800);">${{ row.est_purchase_price|floatformat:0|intcomma }}</span></td>
+              <td>
+                <span style="font-weight:700;color:var(--amber);">${{ row.monthly_maintenance|floatformat:0|intcomma }}/mo</span>
+                <span style="font-size:.68rem;color:var(--slate-400);display:block;">{{ row.annual_maint_pct|floatformat:0 }}% of purchase/yr</span>
+              </td>
+              <td style="text-align:center;">
+                {% if row.rvb_candidate %}
+                <span class="badge badge-red" style="white-space:normal;line-height:1.4;">&#9650; Consider Purchasing</span>
+                {% else %}
+                <span class="badge badge-green" style="white-space:normal;line-height:1.4;">&#10003; Renting is Cost-Effective</span>
+                {% endif %}
+              </td>
+              <td style="font-size:.72rem;color:var(--slate-500);">{{ row.reasoning }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Raw Ledger -->
+  <div id="panel-ledger" class="tab-panel" role="tabpanel">
+    <div class="chart-card">
+      <div class="chart-header" style="flex-wrap:wrap;gap:12px;">
+        <div class="chart-header-left">
+          <div class="chart-title">Raw Master Ledger</div>
+          <div class="chart-subtitle">All published records from rental_master &mdash; filter by week or any column</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <select id="week-picker" onchange="filterLedgerByWeek()" style="
+            padding:6px 10px;border-radius:6px;border:1px solid var(--slate-300);
+            font-size:.8rem;font-weight:600;color:var(--slate-700);background:#fff;cursor:pointer;
+          ">
+            <option value="">All Weeks</option>
+            {% for w in available_weeks %}
+            <option value="{{ w.cycle_year }}-{{ w.cycle_week }}">Week {{ w.cycle_week }}, {{ w.cycle_year }}</option>
+            {% endfor %}
+          </select>
+          <span class="chart-pill" id="ledger-count">{{ record_count }} records</span>
+          <button onclick="downloadLedgerCsv()" style="padding:4px 12px;font-size:.75rem;font-weight:600;border:1px solid var(--slate-300);border-radius:6px;background:#fff;color:var(--slate-700);cursor:pointer;">&#8595; Download CSV</button>
+        </div>
+      </div>
+      <div class="chart-body" style="padding:0;">
+        <div style="overflow:auto;max-height:560px;">
+          <table style="width:100%;border-collapse:collapse;font-size:.71rem;table-layout:fixed;" id="ledger-table">
+            <colgroup>
+              <col style="width:4%;">
+              <col style="width:3.5%;">
+              <col style="width:12%;">
+              <col style="width:9%;">
+              <col style="width:9%;">
+              <col style="width:13%;">
+              <col style="width:7%;">
+              <col style="width:7%;">
+              <col style="width:6%;">
+              <col style="width:5.5%;">
+              <col style="width:7%;">
+              <col style="width:6%;">
+              <col style="width:11%;">
+            </colgroup>
+            <thead style="position:sticky;top:0;z-index:10;">
+              <tr style="background:var(--blue-900);">
+                <th class="lcf-th"><input class="lcol-filter" data-col="0" placeholder="YEAR"></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="1" placeholder="WK #"></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="2" placeholder="RENTAL CO."></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="3" placeholder="TYPE OF EQUIP."></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="4" placeholder="EQUIPMENT #"></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="5" placeholder="DESCRIPTION"></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="6" placeholder="RENT START"></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="7" placeholder="PROJ. END"></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="8" placeholder="PO #"></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="9" placeholder="SN REQ #"></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="10" placeholder="MO. RATE $"></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="11" placeholder="COMMENTS"></th>
+                <th class="lcf-th"><input class="lcol-filter" data-col="12" placeholder="PUBLISHED BY"></th>
+              </tr>
+            </thead>
+            <tbody id="ledger-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-body -->
+
+<script>
+  const cfg = { responsive: true, displayModeBar: false };
+  let dashboardRows = [];   // populated async — see fetch('/analytics/rows/') below
+  const rawCostOverTime = {{ cost_over_time_json|safe }};
+  const comparisonData = {{ comparison_json|safe }};
+  const compFig = {{ compliance_chart|safe }};
+
+  const PERIODS = {
+    week:    { factor: 0.25, label: 'Weekly', suffix: '/wk', note: 'Monthly rate / 4 x quantity' },
+    month:   { factor: 1, label: 'Monthly', suffix: '/mo', note: 'Monthly rate x quantity' },
+    quarter: { factor: 3, label: 'Quarterly', suffix: '/qtr', note: 'Monthly rate x 3 x quantity' },
+    year:    { factor: 12, label: 'Annual', suffix: '/yr', note: 'Monthly rate x 12 x quantity' },
+  };
+
+  let currentPeriod = 'week';
+  let currentCostPeriod = 'week';
+  let currentVolumePeriod = 'week';
+  let activeRows = [];   // populated after async fetch
+  let activeCostOverTime = rawCostOverTime.slice();
+  let costWindow = rawCostOverTime.length || 1;
+
+  const VALID_TABS = new Set(['cost', 'spend', 'utilization', 'area', 'volume', 'comparison', 'compliance', 'rvb', 'ledger']);
+
+  const PANEL_CHARTS = {
+    cost: ['chart-cost'],
+    spend: ['chart-spend'],
+    utilization: ['chart-utilization'],
+    area: ['chart-area'],
+    volume: ['chart-volume'],
+    compliance: ['chart-compliance'],
+  };
+
+  function activatePanel(name, updateButtons = true) {
+    if (!VALID_TABS.has(name)) {
+      name = 'cost';
+    }
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('panel-' + name);
+    if (panel) panel.classList.add('active');
+    if (updateButtons) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        const tabName = (btn.getAttribute('onclick') || '').match(/'([^']+)'/);
+        btn.classList.toggle('active', tabName && tabName[1] === name);
+      });
+    }
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', name);
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+    document.querySelector('.period-strip').style.display = (name === 'spend') ? '' : 'none';
+
+    // Show spinner on each chart in this panel, then do a targeted resize
+    const chartIds = PANEL_CHARTS[name] || [];
+    const spinners = chartIds.map(id => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const sp = document.createElement('div');
+      sp.className = 'panel-spinner';
+      el.closest('.chart-body').appendChild(sp);
+      requestAnimationFrame(() => sp.classList.add('visible'));
+      return { sp, el };
+    }).filter(Boolean);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        chartIds.forEach(id => {
+          const el = document.getElementById(id);
+          if (el && el._fullLayout) Plotly.Plots.resize(el);
+        });
+        spinners.forEach(({ sp }) => {
+          sp.classList.remove('visible');
+          setTimeout(() => sp.remove(), 180);
+        });
+      });
+    });
+  }
+
+  let _tabOverlayTimer = null;
+  function showTabOverlay() {
+    // Remove any existing tab overlay immediately
+    const existing = document.getElementById('tab-loading-overlay');
+    if (existing) existing.remove();
+    if (_tabOverlayTimer) { clearTimeout(_tabOverlayTimer); _tabOverlayTimer = null; }
+
+    const ov = document.createElement('div');
+    ov.id = 'tab-loading-overlay';
+    ov.style.cssText = [
+      'position:fixed;inset:0;z-index:10000',
+      'background:rgba(7,30,52,0.72)',
+      'display:flex;flex-direction:column;align-items:center;justify-content:center',
+      'gap:20px',
+      'transition:opacity .3s',
+    ].join(';');
+    ov.innerHTML = [
+      '<div style="width:64px;height:64px;border:5px solid rgba(255,255,255,.2);border-top-color:#48c98a;border-radius:50%;animation:ps-spin .75s linear infinite"></div>',
+      '<div style="color:#fff;font-size:1rem;font-weight:700;letter-spacing:.04em">Loading&hellip;</div>',
+    ].join('');
+    document.body.appendChild(ov);
+
+    _tabOverlayTimer = setTimeout(() => {
+      ov.style.opacity = '0';
+      setTimeout(() => ov.remove(), 300);
+      _tabOverlayTimer = null;
+    }, 3000);
+  }
+
+  function switchTab(e, name) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    showTabOverlay();
+    activatePanel(name, false);
+  }
+
+  function fmtUSD(n) {
+    return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function populateFilterOptions() {
+    // Collect unique values from dashboardRows
+    const areas = new Set(dashboardRows.map(r => r.mill_department || 'Unassigned'));
+    const vendors = new Set(dashboardRows.map(r => r.vendor_name || 'Unknown'));
+    const categories = new Set(dashboardRows.map(r => r.equipment_category || 'Uncategorized'));
+    const pos = new Set(dashboardRows.filter(r => r.po_number).map(r => r.po_number));
+
+    // Populate area datalist
+    const areaList = document.getElementById('list-area');
+    Array.from(areas).sort().forEach(area => {
+      const opt = document.createElement('option');
+      opt.value = area;
+      areaList.appendChild(opt);
+    });
+
+    // Populate vendor datalist
+    const vendorList = document.getElementById('list-vendor');
+    Array.from(vendors).sort().forEach(vendor => {
+      const opt = document.createElement('option');
+      opt.value = vendor;
+      vendorList.appendChild(opt);
+    });
+
+    // Populate category datalist — use the full approved list, not just what's in data
+    const approvedCategories = {{ approved_categories_json|safe }};
+    const categoryList = document.getElementById('list-category');
+    approvedCategories.forEach(category => {
+      const opt = document.createElement('option');
+      opt.value = category;
+      categoryList.appendChild(opt);
+    });
+
+    // Populate PO datalist
+    const poList = document.getElementById('list-po');
+    Array.from(pos).sort().forEach(po => {
+      const opt = document.createElement('option');
+      opt.value = po;
+      poList.appendChild(opt);
+    });
+  }
+
+  function parseWeekValue(value) {
+    const m = String(value || '').match(/^(\d{4})-(\d{1,2})$/);
+    if (!m) return null;
+    return { year: Number(m[1]), week: Number(m[2]) };
+  }
+
+  function latestCycleFromRows(rows) {
+    let latest = null;
+    rows.forEach(r => {
+      if (!r.cycle_year || !r.cycle_week) return;
+      if (!latest || (r.cycle_year > latest.year) || (r.cycle_year === latest.year && r.cycle_week > latest.week)) {
+        latest = { year: r.cycle_year, week: r.cycle_week };
+      }
+    });
+    return latest;
+  }
+
+  function formatCompactMoney(value) {
+    const n = Number(value || 0);
+    if (n >= 1000000) return '$' + (n / 1000000).toFixed(2) + 'M';
+    if (n >= 1000) return '$' + (n / 1000).toFixed(2) + 'K';
+    return fmtUSD(n);
+  }
+
+  function updateTopKpis(rows) {
+    const selectedWeek = parseWeekValue(document.getElementById('filter-week').value);
+    let cycle = selectedWeek || latestCycleFromRows(rows) || latestCycleFromRows(dashboardRows) || { year: {{ latest_year|default:0 }}, week: {{ latest_week|default:0 }} };
+    const subset = rows.filter(r => r.cycle_year === cycle.year && r.cycle_week === cycle.week);
+    const equipmentCount = subset.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
+    const monthlyTotal = subset.reduce((sum, r) => sum + Number(r.monthly || 0), 0);
+
+    document.getElementById('kpi-week-number').textContent = cycle.week || 0;
+    document.getElementById('kpi-year-number').textContent = cycle.year || 0;
+    document.getElementById('kpi-equipment-count').textContent = equipmentCount.toLocaleString('en-US');
+    document.getElementById('kpi-week-total').textContent = formatCompactMoney(monthlyTotal * 0.25);
+    document.getElementById('kpi-month-total').textContent = formatCompactMoney(monthlyTotal);
+  }
+
+  function aggregateRows(rows, keyName, limit = 20) {
+    const totals = new Map();
+    rows.forEach(r => {
+      const key = (r[keyName] || 'Unassigned').toString().trim() || 'Unassigned';
+      totals.set(key, (totals.get(key) || 0) + Number(r.monthly || 0));
+    });
+    return Array.from(totals.entries())
+      .map(([name, monthly]) => ({ name, monthly }))
+      .sort((a, b) => b.monthly - a.monthly)
+      .slice(0, limit);
+  }
+
+  function buildSeriesByWeek(rows) {
+    const byWeek = new Map();
+    rows.forEach(r => {
+      const year = Number(r.cycle_year || 0);
+      const week = Number(r.cycle_week || 0);
+      if (!year || !week) return;
+      const label = `${year}-W${String(week).padStart(2, '0')}`;
+      if (!byWeek.has(label)) byWeek.set(label, { label, monthly: 0, quantity: 0, year, week });
+      const cur = byWeek.get(label);
+      cur.monthly += Number(r.monthly || 0);
+      cur.quantity += Number(r.quantity || 0);
+    });
+    return Array.from(byWeek.values()).sort((a, b) => (a.year - b.year) || (a.week - b.week));
+  }
+
+  function isoWeekStartDate(year, week) {
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const jan4Day = (jan4.getUTCDay() + 6) % 7;
+    const mondayWeek1 = new Date(jan4);
+    mondayWeek1.setUTCDate(jan4.getUTCDate() - jan4Day);
+    const result = new Date(mondayWeek1);
+    result.setUTCDate(mondayWeek1.getUTCDate() + ((week - 1) * 7));
+    return result;
+  }
+
+  function collapseSeriesByPeriod(points, period) {
+    if (period === 'week') return points.slice();
+    const grouped = new Map();
+
+    points.forEach(p => {
+      const year = Number(p.year || 0);
+      const week = Number(p.week || 0);
+      if (!year || !week) return;
+
+      const dt = isoWeekStartDate(year, week);
+      const calYear = dt.getUTCFullYear();  // calendar year of the week-start date
+      const month = dt.getUTCMonth() + 1;
+      const quarter = Math.floor((month - 1) / 3) + 1;
+
+      let key;
+      let label;
+      let sortValue;
+      if (period === 'month') {
+        key = `${calYear}-${String(month).padStart(2, '0')}`;
+        label = key;
+        sortValue = (calYear * 100) + month;
+      } else if (period === 'quarter') {
+        key = `${calYear}-Q${quarter}`;
+        label = key;
+        sortValue = (calYear * 10) + quarter;
+      } else {
+        key = `${calYear}`;
+        label = `${calYear}`;
+        sortValue = calYear;
+      }
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          label,
+          sortValue,
+          monthly: 0,
+          quantity: 0,
+          count: 0,
+        });
+      }
+
+      const bucket = grouped.get(key);
+      bucket.monthly += Number(p.monthly || 0);
+      bucket.quantity += Number(p.quantity || 0);
+      bucket.count += 1;
+    });
+
+    return Array.from(grouped.values())
+      .sort((a, b) => a.sortValue - b.sortValue)
+      .map(b => ({
+        label: b.label,
+        monthly: b.count ? (b.monthly / b.count) : 0,
+        quantity: b.count ? (b.quantity / b.count) : 0,
+      }));
+  }
+
+  function getPeriodizedSeries() {
+    return collapseSeriesByPeriod(activeCostOverTime, currentCostPeriod);
+  }
+
+  function getCostSeries() {
+    const period = PERIODS[currentCostPeriod];
+    const periodized = getPeriodizedSeries();
+    const visible = periodized.slice(-costWindow);
+    return {
+      period,
+      visible,
+      values: visible.map(d => Number(d.monthly || 0) * period.factor),
+    };
+  }
+
+  function updateCostRangeLabel() {
+    const totalPeriods = getPeriodizedSeries().length || 1;
+    const label = document.getElementById('cost-range-value');
+    label.textContent = costWindow >= totalPeriods ? 'All periods' : `Last ${costWindow} shown`;
+  }
+
+  function buildCostSummary(series) {
+    const el = document.getElementById('cost-summary');
+    const n = series.visible.length;
+    const p = series.period;
+    if (n === 0) { el.textContent = 'No data available for the active slicers.'; return; }
+    if (n === 1) {
+      const cur = series.visible[0];
+      el.innerHTML = `Only one reporting period is visible (<strong>${cur.label}</strong>): total ${p.label.toLowerCase()} cost of <strong>$${(cur.monthly * p.factor).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>.`;
+      return;
+    }
+    const prev = series.visible[n - 2];
+    const cur = series.visible[n - 1];
+    const prevValue = prev.monthly * p.factor;
+    const curValue = cur.monthly * p.factor;
+    const delta = curValue - prevValue;
+    const pct = prevValue ? (delta / prevValue * 100) : 0;
+    const dir = delta >= 0 ? 'increased' : 'decreased';
+    const color = delta >= 0 ? '#b91c1c' : '#15803d';
+    const absDelta = Math.abs(delta);
+    const absPct = Math.abs(pct);
+    const fmt = v => '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    el.innerHTML = `<span style="color:${color};font-weight:700;">${dir.charAt(0).toUpperCase() + dir.slice(1)} ${absPct.toFixed(1)}%</span> | `
+      + `${p.label} rental cost moved from ${fmt(prevValue)} (<strong>${prev.label}</strong>) to ${fmt(curValue)} (<strong>${cur.label}</strong>), `
+      + `a swing of <strong style="color:${color};">${delta >= 0 ? '+' : '-'}${fmt(absDelta)}</strong>.`;
+  }
+
+  function buildCostChart() {
+    const series = getCostSeries();
+    updateCostRangeLabel();
+    buildCostSummary(series);
+    Plotly.react('chart-cost', [{
+      type: 'scatter',
+      mode: 'lines+markers',
+      x: series.visible.map(d => d.label),
+      y: series.values,
+      line: { color: '#2383e2', width: 2.5 },
+      marker: { color: '#2383e2', size: 6 },
+      hovertemplate: `%{x}<br>${series.period.label}: $%{y:,.2f}<extra></extra>`,
+    }], {
+      xaxis: { type: 'category', title: `${series.period.label} Period`, tickangle: -35, range: [-0.5, series.visible.length - 0.5] },
+      yaxis: { title: `${series.period.label} Cost (USD)`, tickformat: '$,.0f' },
+      plot_bgcolor: '#f8fbfe',
+      paper_bgcolor: 'white',
+      font: { family: 'Segoe UI, Helvetica Neue, Arial, sans-serif' },
+      margin: { l: 80, r: 20, t: 24, b: 110 },
+    }, cfg);
+  }
+
+  function buildSupplierChart(rows) {
+    const p = PERIODS[currentPeriod];
+    const top = aggregateRows(rows, 'vendor_name', 20);
+    Plotly.react('chart-spend', [{
+      type: 'bar',
+      orientation: 'h',
+      y: top.map(d => d.name).reverse(),
+      x: top.map(d => d.monthly * p.factor).reverse(),
+      marker: { color: '#1d6fb8' },
+      hovertemplate: '%{y}<br>$%{x:,.2f}' + p.suffix + '<extra></extra>',
+    }], {
+      xaxis: { title: p.label + ' Cost (USD)', tickformat: '$,.0f' },
+      yaxis: { automargin: true },
+      plot_bgcolor: '#f8fbfe',
+      paper_bgcolor: 'white',
+      margin: { l: 170, r: 20, t: 26, b: 50 },
+    }, cfg);
+    document.getElementById('spend-chart-title').textContent = p.label.toUpperCase() + ' COST BY SUPPLIER';
+    document.getElementById('spend-chart-subtitle').textContent = p.note + ' - top suppliers in current filter scope';
+  }
+
+  function buildAreaChart(rows) {
+    const p = PERIODS[currentPeriod];
+    const top = aggregateRows(rows, 'mill_department', 10);
+    Plotly.react('chart-area', [{
+      type: 'bar',
+      orientation: 'h',
+      y: top.map(d => d.name).reverse(),
+      x: top.map(d => d.monthly * p.factor).reverse(),
+      marker: { color: '#1d6fb8' },
+      hovertemplate: `%{y}<br>${p.label}: $%{x:,.2f}<extra></extra>`,
+    }], {
+      xaxis: { title: `${p.label} Cost (USD)`, tickformat: '$,.0f' },
+      yaxis: { automargin: true },
+      plot_bgcolor: '#f8fbfe',
+      paper_bgcolor: 'white',
+      margin: { l: 160, r: 20, t: 26, b: 50 },
+    }, cfg);
+  }
+
+  function buildCategoryChart(rows) {
+    const p = PERIODS[currentPeriod];
+    const top = aggregateRows(rows, 'equipment_category', 15);
+    Plotly.react('chart-utilization', [{
+      type: 'bar',
+      orientation: 'h',
+      y: top.map(d => d.name).reverse(),
+      x: top.map(d => d.monthly * p.factor).reverse(),
+      marker: { color: '#1d6fb8' },
+      hovertemplate: `%{y}<br>${p.label}: $%{x:,.2f}<extra></extra>`,
+    }], {
+      xaxis: { title: `${p.label} Cost (USD)`, tickformat: '$,.0f' },
+      yaxis: { automargin: true },
+      plot_bgcolor: '#f8fbfe',
+      paper_bgcolor: 'white',
+      margin: { l: 220, r: 20, t: 26, b: 50 },
+    }, cfg);
+  }
+
+  function buildVolumeChart() {
+    const period = PERIODS[currentVolumePeriod];
+    const periodized = collapseSeriesByPeriod(activeCostOverTime, currentVolumePeriod);
+    Plotly.react('chart-volume', [{
+      type: 'scatter',
+      mode: 'lines+markers',
+      x: periodized.map(d => d.label),
+      y: periodized.map(d => Number(d.quantity || 0)),
+      line: { color: '#2383e2', width: 2.5 },
+      marker: { color: '#2383e2', size: 6 },
+      hovertemplate: `%{x}<br>Volume: %{y:.1f}<extra></extra>`,
+    }], {
+      xaxis: { type: 'category', title: `${period.label} Period`, tickangle: -35, range: [-0.5, periodized.length - 0.5] },
+      yaxis: { title: `Count of Equipment (${period.label})` },
+      plot_bgcolor: '#f8fbfe',
+      paper_bgcolor: 'white',
+      margin: { l: 70, r: 20, t: 24, b: 110 },
+    }, cfg);
+  }
+
+  function setVolumePeriod(period) {
+    if (!PERIODS[period]) return;
+    currentVolumePeriod = period;
+    document.querySelectorAll('[data-volume-period]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.volumePeriod === period);
+    });
+    buildVolumeChart();
+  }
+
+  function setCostPeriod(period) {
+    if (!PERIODS[period]) return;
+    currentCostPeriod = period;
+    currentPeriod = period;
+    document.querySelectorAll('[data-cost-period]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.costPeriod === period);
+    });
+    document.querySelectorAll('.period-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.period === period);
+    });
+    buildCostChart();
+    buildSupplierChart(activeRows);
+    buildAreaChart(activeRows);
+    buildCategoryChart(activeRows);
+  }
+
+  function setCostWindow(value) {
+    const totalPeriods = getPeriodizedSeries().length || 1;
+    costWindow = Math.max(1, Math.min(totalPeriods, Number(value)));
+    buildCostChart();
+  }
+
+  function setPeriod(period) {
+    if (!PERIODS[period]) return;
+    currentPeriod = period;
+    currentCostPeriod = period;
+    document.querySelectorAll('.period-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.period === period);
+    });
+    document.querySelectorAll('[data-cost-period]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.costPeriod === period);
+    });
+    buildCostChart();
+    buildSupplierChart(activeRows);
+    buildAreaChart(activeRows);
+    buildCategoryChart(activeRows);
+    updateRvbTable();
+  }
+
+  function filterRowsFromSlicers() {
+    const week = document.getElementById('filter-week').value.trim().toLowerCase();
+    const area = document.getElementById('filter-area').value.trim().toLowerCase();
+    const vendor = document.getElementById('filter-vendor').value.trim().toLowerCase();
+    const category = document.getElementById('filter-category').value.trim().toLowerCase();
+    const po = document.getElementById('filter-po').value.trim().toLowerCase();
+
+    return dashboardRows.filter(r => {
+      const weekLabel = `${r.cycle_year}-${r.cycle_week}`.toLowerCase();
+      if (week && week !== weekLabel) return false;
+      if (area && !String(r.mill_department || '').toLowerCase().includes(area)) return false;
+      if (vendor && !String(r.vendor_name || '').toLowerCase().includes(vendor)) return false;
+      if (category && !String(r.equipment_category || '').toLowerCase().includes(category)) return false;
+      if (po && !String(r.po_number || '').toLowerCase().includes(po)) return false;
+      return true;
+    });
+  }
+
+  function applyTopSlicers() {
+    activeRows = filterRowsFromSlicers();
+    activeCostOverTime = buildSeriesByWeek(activeRows);
+    const range = document.getElementById('cost-range');
+    const totalPeriods = getPeriodizedSeries().length || 1;
+    range.max = String(totalPeriods);
+    if (costWindow > totalPeriods) costWindow = totalPeriods;
+    if (costWindow < 1) costWindow = 1;
+    range.value = String(costWindow);
+
+    updateTopKpis(activeRows);
+    buildCostChart();
+    buildVolumeChart();
+    buildAreaChart(activeRows);
+    buildCategoryChart(activeRows);
+    buildSupplierChart(activeRows);
+    buildComparisonPanel(computeComparisonFromRows(activeRows));
+    buildComplianceChart(activeRows);
+    updateRvbTable();
+    applyLedgerFromTopFilters();
+    updateExportReportLink();
+  }
+
+  function updateExportReportLink() {
+    const btn = document.getElementById('export-report-btn');
+    if (!btn) return;
+    const params = new URLSearchParams();
+    const week = document.getElementById('filter-week').value.trim();
+    const area = document.getElementById('filter-area').value.trim();
+    const vendor = document.getElementById('filter-vendor').value.trim();
+    const category = document.getElementById('filter-category').value.trim();
+    const po = document.getElementById('filter-po').value.trim();
+    if (week) params.set('week', week);
+    if (area) params.set('area', area);
+    if (vendor) params.set('vendor', vendor);
+    if (category) params.set('category', category);
+    if (po) params.set('po', po);
+    const baseUrl = "{% url 'analytics_export_report' %}";
+    btn.href = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+  }
+
+  function computeComparisonFromRows(rows) {
+    const weeks = Array.from(new Set(rows.map(r => `${r.cycle_year}-${r.cycle_week}`)))
+      .map(s => {
+        const parts = s.split('-');
+        return { year: Number(parts[0]), week: Number(parts[1]) };
+      })
+      .filter(w => w.year && w.week)
+      .sort((a, b) => (a.year - b.year) || (a.week - b.week));
+
+    if (weeks.length < 2) {
+      return {
+        current_label: '',
+        previous_label: '',
+        placed_on_rent: [],
+        taken_off_rent: [],
+      };
+    }
+
+    const prev = weeks[weeks.length - 2];
+    const curr = weeks[weeks.length - 1];
+    const prevRows = rows.filter(r => r.cycle_year === prev.year && r.cycle_week === prev.week);
+    const currRows = rows.filter(r => r.cycle_year === curr.year && r.cycle_week === curr.week);
+    const prevMap = new Map(prevRows.map(r => [`${r.vendor_name}||${r.equipment_id}`, r]));
+    const currMap = new Map(currRows.map(r => [`${r.vendor_name}||${r.equipment_id}`, r]));
+
+    const placed = [];
+    currMap.forEach((row, key) => {
+      if (prevMap.has(key)) return;
+      placed.push({
+        vendor_name: row.vendor_name,
+        equipment_id: row.equipment_id,
+        equipment_description: row.equipment_description,
+        monthly_rate: Number(row.monthly || 0),
+      });
+    });
+
+    const removed = [];
+    prevMap.forEach((row, key) => {
+      if (currMap.has(key)) return;
+      removed.push({
+        vendor_name: row.vendor_name,
+        equipment_id: row.equipment_id,
+        equipment_description: row.equipment_description,
+        monthly_rate: Number(row.monthly || 0),
+      });
+    });
+
+    const fmtWeek = w => `${w.year}-W${String(w.week).padStart(2, '0')}`;
+    return {
+      current_label: fmtWeek(curr),
+      previous_label: fmtWeek(prev),
+      placed_on_rent: placed.sort((a, b) => (a.vendor_name || '').localeCompare(b.vendor_name || '')),
+      taken_off_rent: removed.sort((a, b) => (a.vendor_name || '').localeCompare(b.vendor_name || '')),
+    };
+  }
+
+  function renderComparisonTable(rows, targetId) {
+    const target = document.getElementById(targetId);
+    if (!rows.length) {
+      target.innerHTML = '<div class="comparison-empty">No equipment changes found for this side of the comparison.</div>';
+      return;
+    }
+    target.innerHTML = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Vendor</th>
+            <th>Equipment #</th>
+            <th>Description</th>
+            <th>Monthly Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(row => `
+            <tr>
+              <td>${row.vendor_name || ''}</td>
+              <td>${row.equipment_id || ''}</td>
+              <td>${row.equipment_description || ''}</td>
+              <td>${fmtUSD(row.monthly_rate || 0)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function buildComparisonPanel(payload) {
+    const compare = payload || comparisonData;
+    const summary = document.getElementById('comparison-summary');
+    const deltaCard = document.getElementById('comparison-delta');
+    const subtitle = document.getElementById('comparison-subtitle');
+    const pill = document.getElementById('comparison-pill');
+    const placed = compare.placed_on_rent || [];
+    const removed = compare.taken_off_rent || [];
+
+    if (!compare.current_label || !compare.previous_label) {
+      summary.textContent = 'At least two published weeks are required before this comparison can be shown.';
+      deltaCard.className = 'comparison-delta-card flat';
+      deltaCard.textContent = 'No week-over-week dollar delta is available yet.';
+      document.getElementById('placed-count').textContent = '0 items';
+      document.getElementById('removed-count').textContent = '0 items';
+      subtitle.textContent = 'Latest published week compared to the immediately prior published week';
+      pill.textContent = '2-week view';
+      renderComparisonTable([], 'placed-table-wrap');
+      renderComparisonTable([], 'removed-table-wrap');
+      return;
+    }
+
+    const currentWeekPoint = activeCostOverTime.find(p => p.label === compare.current_label) || rawCostOverTime.find(p => p.label === compare.current_label);
+    const previousWeekPoint = activeCostOverTime.find(p => p.label === compare.previous_label) || rawCostOverTime.find(p => p.label === compare.previous_label);
+    const currentMonthly = Number(currentWeekPoint ? currentWeekPoint.monthly : 0);
+    const previousMonthly = Number(previousWeekPoint ? previousWeekPoint.monthly : 0);
+    const currentWeekly = currentMonthly * 0.25;
+    const previousWeekly = previousMonthly * 0.25;
+    const weeklyDelta = currentWeekly - previousWeekly;
+    const monthlyDelta = currentMonthly - previousMonthly;
+    const changeClass = weeklyDelta > 0 ? 'up' : weeklyDelta < 0 ? 'down' : 'flat';
+    const direction = weeklyDelta > 0 ? 'increase' : weeklyDelta < 0 ? 'decrease' : 'no change';
+    const fmtSignedUSD = value => {
+      if (value === 0) return '$0.00';
+      return `${value > 0 ? '+' : '-'}${fmtUSD(Math.abs(value))}`;
+    };
+
+    deltaCard.className = `comparison-delta-card ${changeClass}`;
+    deltaCard.innerHTML = `Week-over-week delta (${compare.previous_label} to ${compare.current_label}): `
+      + `<strong>${direction === 'no change' ? '$0.00' : fmtSignedUSD(weeklyDelta)}</strong> per week `
+      + `(<strong>${fmtSignedUSD(monthlyDelta)}</strong> per month).`;
+
+    subtitle.textContent = `${compare.previous_label} compared with ${compare.current_label}`;
+    pill.textContent = `${compare.previous_label} -> ${compare.current_label}`;
+    document.getElementById('placed-count').textContent = `${placed.length} items`;
+    document.getElementById('removed-count').textContent = `${removed.length} items`;
+    summary.innerHTML = `<strong>${placed.length}</strong> equipment lines were placed on-rent in <strong>${compare.current_label}</strong>, while <strong>${removed.length}</strong> were taken off rent since <strong>${compare.previous_label}</strong>.`;
+    renderComparisonTable(placed, 'placed-table-wrap');
+    renderComparisonTable(removed, 'removed-table-wrap');
+  }
+
+  function updateRvbTable() {
+    const week = document.getElementById('filter-week').value.trim().toLowerCase();
+    const area = document.getElementById('filter-area').value.trim().toLowerCase();
+    const vendor = document.getElementById('filter-vendor').value.trim().toLowerCase();
+    const category = document.getElementById('filter-category').value.trim().toLowerCase();
+    const po = document.getElementById('filter-po').value.trim().toLowerCase();
+    document.querySelectorAll('#panel-rvb tbody tr[data-filter-vendor]').forEach(tr => {
+      const weekVal = (tr.dataset.filterWeek || '').toLowerCase();
+      const areaVal = (tr.dataset.filterArea || '').toLowerCase();
+      const vendorVal = (tr.dataset.filterVendor || '').toLowerCase();
+      const categoryVal = (tr.dataset.filterCategory || '').toLowerCase();
+      const poVal = (tr.dataset.filterPo || '').toLowerCase();
+      const show = (!week || weekVal === week)
+        && (!area || areaVal.includes(area))
+        && (!vendor || vendorVal.includes(vendor))
+        && (!category || categoryVal.includes(category))
+        && (!po || poVal.includes(po));
+      tr.style.display = show ? '' : 'none';
+    });
+  }
+
+  function buildComplianceChart(rows) {
+    const allowedVendors = new Set(rows.map(r => r.vendor_name));
+    const traces = (compFig.data || []).map(trace => {
+      const x = trace.x || [];
+      const y = trace.y || [];
+      const filtered = x.map((vendor, idx) => ({ vendor, value: y[idx] }))
+        .filter(item => allowedVendors.has(item.vendor));
+      return {
+        ...trace,
+        x: filtered.map(item => item.vendor),
+        y: filtered.map(item => item.value),
+      };
+    });
+    Plotly.react('chart-compliance', traces, compFig.layout, cfg);
+  }
+
+  function applyLedgerFromTopFilters() {
+    const week = document.getElementById('filter-week').value.trim();
+    const area = document.getElementById('filter-area').value.trim();
+    const vendor = document.getElementById('filter-vendor').value.trim();
+    const category = document.getElementById('filter-category').value.trim();
+    const po = document.getElementById('filter-po').value.trim();
+
+    const weekPicker = document.getElementById('week-picker');
+    if (weekPicker) {
+      weekPicker.value = week;
+    }
+    const setFilter = (col, value) => {
+      const input = document.querySelector(`.lcol-filter[data-col="${col}"]`);
+      if (input) input.value = value;
+    };
+    setFilter(2, vendor);
+    setFilter(3, area);
+    setFilter(5, category);
+    setFilter(8, po);
+    applyLedgerFilters();
+  }
+
+  ['filter-week', 'filter-area', 'filter-vendor', 'filter-category', 'filter-po'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', applyTopSlicers);
+    el.addEventListener('change', applyTopSlicers);
+  });
+
+  // Clear (×) buttons for text filter inputs
+  document.querySelectorAll('.slicer-clear').forEach(btn => {
+    const targetId = btn.dataset.target;
+    const input = document.getElementById(targetId);
+    if (!input) return;
+    const syncVisibility = () => btn.classList.toggle('visible', input.value.length > 0);
+    input.addEventListener('input', syncVisibility);
+    input.addEventListener('change', syncVisibility);
+    btn.addEventListener('click', () => {
+      input.value = '';
+      btn.classList.remove('visible');
+      input.dispatchEvent(new Event('input'));
+      input.focus();
+    });
+  });
+
+  const costRangeEl = document.getElementById('cost-range');
+  if (costRangeEl) {
+    costRangeEl.max = String(activeCostOverTime.length || 1);
+    costRangeEl.value = String(activeCostOverTime.length || 1);
+  }
+
+  populateFilterOptions();  // populates category datalist from approved list (no rows needed)
+  setPeriod('week');        // sets button states; full chart render happens after fetch
+  const urlTab = new URLSearchParams(window.location.search).get('tab') || 'cost';
+  activatePanel(urlTab, true);
+
+  // ── Full-page loading overlay ─────────────────────────────────────────────
+  // Covers all chart panels until the async row fetch completes.
+  const loadingOverlay = document.createElement('div');
+  loadingOverlay.id = 'analytics-loading-overlay';
+  loadingOverlay.style.cssText = [
+    'position:fixed;inset:0;z-index:10000',
+    'background:rgba(7,30,52,0.72)',
+    'display:flex;flex-direction:column;align-items:center;justify-content:center',
+    'gap:20px',
+    'transition:opacity .3s',
+  ].join(';');
+  loadingOverlay.innerHTML = [
+    '<div style="width:64px;height:64px;border:5px solid rgba(255,255,255,.2);border-top-color:#48c98a;border-radius:50%;animation:ps-spin .75s linear infinite"></div>',
+    '<div style="color:#fff;font-size:1rem;font-weight:700;letter-spacing:.04em">Loading analytics data&hellip;</div>',
+    '<div style="color:rgba(255,255,255,.55);font-size:.8rem">Fetching 10,000+ records</div>',
+  ].join('');
+  document.body.appendChild(loadingOverlay);
+  const overlayShownAt = Date.now();
+  const OVERLAY_MIN_MS = 3000;
+
+  // ── Async row hydration ──────────────────────────────────────────────────
+  fetch('/analytics/rows/', { credentials: 'same-origin' })
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(data => {
+      dashboardRows = data.rows || [];
+
+      // Default Raw Ledger to most recent week
+      const weekPicker = document.getElementById('week-picker');
+      if (weekPicker && weekPicker.options.length > 1 && !weekPicker.value) {
+        weekPicker.value = weekPicker.options[1].value;  // options[0] = "All Weeks"
+      }
+
+      // Hydrate everything now that rows are available
+      populateFilterOptions();
+      applyTopSlicers();
+      applyLedgerFilters();
+
+      // Enforce minimum 3-second overlay display
+      const elapsed = Date.now() - overlayShownAt;
+      const remaining = Math.max(0, OVERLAY_MIN_MS - elapsed);
+      setTimeout(() => {
+        loadingOverlay.style.opacity = '0';
+        setTimeout(() => loadingOverlay.remove(), 300);
+      }, remaining);
+    })
+    .catch(err => {
+      loadingOverlay.innerHTML = '<div style="color:#fca5a5;font-size:1rem;font-weight:700">&#9888; Failed to load analytics data</div><div style="color:rgba(255,255,255,.6);font-size:.82rem;margin-top:8px">Refresh the page to retry</div>';
+      loadingOverlay.style.background = 'rgba(120,0,0,0.82)';
+      console.error("analytics_rows fetch error:", err);
+    });
+
+  function downloadLedgerCsv() {
+    const table = document.getElementById('ledger-table');
+    const weekVal = document.getElementById('week-picker').value;
+    const rows = [];
+    // Header row (first thead tr — the filter input row shows placeholder text, skip it)
+    const headerCells = Array.from(table.querySelectorAll('thead tr:last-child th, thead tr th'));
+    // Use placeholder text from filter inputs as column names
+    const headers = Array.from(table.querySelectorAll('thead input.lcol-filter'))
+      .map(inp => '"' + inp.placeholder + '"');
+    rows.push(headers.join(','));
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      if (tr.style.display === 'none') return;
+      const cells = Array.from(tr.querySelectorAll('td')).map(cell => {
+        return '"' + cell.innerText.replace(/"/g, '""').replace(/\n/g, ' ').trim() + '"';
+      });
+      rows.push(cells.join(','));
+    });
+    const label = weekVal ? weekVal.replace('-', '_W') : 'all_weeks';
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `master_ledger_${label}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function downloadRvbCsv() {
+    const table = document.querySelector('#panel-rvb table');
+    const rows = [];
+    table.querySelectorAll('tr').forEach(tr => {
+      const cells = Array.from(tr.querySelectorAll('th, td')).map(cell => {
+        // Strip inner HTML, collapse whitespace
+        return '"' + cell.innerText.replace(/"/g, '""').replace(/\n/g, ' ').trim() + '"';
+      });
+      rows.push(cells.join(','));
+    });
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'rent_vs_buy_candidates.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // ── Raw Ledger: data-driven rendering (no DOM show/hide) ──────
+  function esc(v) {
+    return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function buildLedgerRows(rows) {
+    var TD = 'padding:7px 6px;border-bottom:1px solid var(--slate-100);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    if (!rows.length) {
+      return '<tr><td colspan="13" style="padding:40px;text-align:center;color:var(--slate-400);">No records match. Publish a week from the Reviewer Portal first.</td></tr>';
+    }
+    const parts = [];
+    for (const r of rows) {
+      parts.push(
+        `<tr data-week="${r.cycle_year}-${r.cycle_week}">` +
+        `<td style="${TD}">${r.cycle_year || '—'}</td>` +
+        `<td style="${TD}text-align:center;">${r.cycle_week || '—'}</td>` +
+        `<td style="${TD}font-weight:600;" title="${esc(r.vendor_name)}">${esc(r.vendor_name)}</td>` +
+        `<td style="${TD}">${esc(r.vendor_code) || '—'}</td>` +
+        `<td style="${TD}font-weight:700;color:var(--blue-700);font-family:Consolas,monospace;font-size:.69rem;" title="${esc(r.equipment_id)}">${esc(r.equipment_id)}</td>` +
+        `<td style="${TD}" title="${esc(r.equipment_description)}">${esc(r.equipment_description)}</td>` +
+        `<td style="${TD}">${esc(r.on_rent_start) || '—'}</td>` +
+        `<td style="${TD}">${esc(r.on_rent_end) || '—'}</td>` +
+        `<td style="${TD}">${esc(r.po_number) || '—'}</td>` +
+        `<td style="${TD}">${esc(r.sn_request_number) || '—'}</td>` +
+        `<td style="${TD}font-weight:700;color:var(--green-700);">$${r.rate_daily.toFixed(2)}</td>` +
+        `<td style="${TD}color:var(--slate-400);">—</td>` +
+        `<td style="${TD}color:var(--slate-500);">${esc(r.approved_by) || '—'}</td>` +
+        `</tr>`
+      );
+    }
+    return parts.join('');
+  }
+
+  function applyLedgerFilters() {
+    const weekVal = document.getElementById('week-picker').value;
+    const filters = Array.from(document.querySelectorAll('.lcol-filter'))
+                         .map(f => f.value.trim().toLowerCase());
+    const anyFilter = weekVal || filters.some(Boolean);
+
+    let filtered = dashboardRows;
+    if (anyFilter) {
+      filtered = dashboardRows.filter(r => {
+        if (weekVal && `${r.cycle_year}-${r.cycle_week}` !== weekVal) return false;
+        if (!filters.some(Boolean)) return true;
+        const vals = [
+          String(r.cycle_year || ''),
+          String(r.cycle_week || ''),
+          r.vendor_name || '',
+          r.vendor_code || '',
+          r.equipment_id || '',
+          r.equipment_description || '',
+          r.on_rent_start || '',
+          r.on_rent_end || '',
+          r.po_number || '',
+          r.sn_request_number || '',
+          r.rate_daily != null ? r.rate_daily.toFixed(2) : '',
+          '',
+          r.approved_by || '',
+        ];
+        return filters.every((v, i) => !v || vals[i].toLowerCase().includes(v));
+      });
+    }
+
+    document.getElementById('ledger-tbody').innerHTML = buildLedgerRows(filtered);
+    const n = filtered.length;
+    document.getElementById('ledger-count').textContent = n + ' record' + (n !== 1 ? 's' : '');
+  }
+
+  function filterLedgerByWeek() { applyLedgerFilters(); }
+
+  // Initial render
+  applyLedgerFilters();
+
+  document.querySelectorAll('.lcol-filter').forEach(f => {
+    f.addEventListener('input', applyLedgerFilters);
+  });
+
+  // dark mode wired in early <script> at top of <body>
+</script>
+</body>
+</html>

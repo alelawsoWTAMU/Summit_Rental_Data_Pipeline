@@ -1,0 +1,194 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} — Rental Data Pipeline{% endblock %}
+
+{% block branding %}
+<style>
+  /* ── Reset Django's default header colours ── */
+  #header {
+    background: #0b2a4a !important;
+    border-bottom: 3px solid #2ea86b !important;
+    padding: 0 !important;
+    height: auto !important;
+    box-shadow: 0 2px 12px rgba(4,16,30,.35) !important;
+    display: block !important;
+  }
+  #header a:link, #header a:visited { color: #ffffff !important; }
+
+  /* Ensure custom topbar spans the full header width (admin defaults float branding). */
+  #branding {
+    float: none !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    clear: both !important;
+  }
+
+  /* Hide the default Django h1 branding — we replace it */
+  #branding h1, #branding h1 a { display: none !important; }
+
+  /* ── Portal topbar ── */
+  .portal-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+    height: 56px;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    gap: 10px;
+  }
+  .portal-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .portal-logo {
+    width: 30px; height: 30px;
+    border-radius: 7px;
+    background: linear-gradient(135deg, #195f9d, #1f8a57);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .portal-divider {
+    width: 1px; height: 20px;
+    background: rgba(255,255,255,.18);
+  }
+  .portal-kicker {
+    font-size: 10px;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: #48c98a;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .portal-title {
+    font-size: .95rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -.01em;
+    line-height: 1;
+    text-decoration: none !important;
+  }
+  .portal-title:hover { color: #48c98a !important; }
+  .portal-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .portal-user {
+    font-size: .75rem;
+    color: rgba(255,255,255,.5);
+    padding-right: 4px;
+  }
+  .portal-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 13px;
+    border-radius: 6px;
+    font-size: .78rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    letter-spacing: .02em;
+    border: 1.5px solid rgba(255,255,255,.22);
+    color: rgba(255,255,255,.82) !important;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .portal-nav-btn:hover {
+    background: rgba(255,255,255,.08) !important;
+    border-color: #2ea86b !important;
+    color: #48c98a !important;
+  }
+  .portal-nav-btn.primary {
+    background: #1f8a57 !important;
+    border-color: #1f8a57 !important;
+    color: #ffffff !important;
+  }
+  .portal-nav-btn.primary:hover {
+    background: #2ea86b !important;
+    border-color: #2ea86b !important;
+    color: #ffffff !important;
+  }
+  .theme-toggle {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(255,255,255,.22);
+    background: rgba(255,255,255,.06);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .theme-toggle:hover { background: rgba(255,255,255,.12); border-color: #2ea86b; }
+  .theme-toggle .sun { display: none; }
+  html.dark-ui .theme-toggle .sun { display: inline; }
+  html.dark-ui .theme-toggle .moon { display: none; }
+  html.dark-ui #header {
+    background: #060f1a !important;
+    border-bottom-color: #1f8a57 !important;
+  }
+
+  /* Remove the blue breadcrumb strip on Users/Groups admin pages only. */
+  body.app-auth.model-user .breadcrumbs,
+  body.app-auth.model-group .breadcrumbs {
+    display: none !important;
+  }
+</style>
+
+<div class="portal-topbar">
+  <div class="portal-topbar-left">
+    <div class="portal-logo" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <path d="M3 14l4-5 3 3 3-4 4 6H3z" fill="rgba(255,255,255,.9)"/>
+        <circle cx="15" cy="5" r="2.5" fill="#48c98a"/>
+      </svg>
+    </div>
+    <div class="portal-divider"></div>
+    <div>
+      <div class="portal-kicker">Rental Data Pipeline</div>
+      <a href="{% url 'admin:index' %}" class="portal-title">Admin Portal</a>
+    </div>
+  </div>
+  <div class="portal-topbar-right">
+    {% if request.user.is_authenticated %}
+      <span class="portal-user">{{ request.user.username }}</span>
+      <a href="{% url 'admin:index' %}" class="portal-nav-btn">Home</a>
+      <a href="{% url 'admin:auth_user_changelist' %}" class="portal-nav-btn">Users</a>
+      <a href="{% url 'admin:auth_group_changelist' %}" class="portal-nav-btn">Groups</a>
+      <button type="button" id="theme-toggle" class="theme-toggle" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
+        <span class="moon">&#9790;</span><span class="sun">&#9728;</span>
+      </button>
+      <form method="post" action="{% url 'portal_logout' %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="portal-nav-btn primary">Sign Out</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  (function () {
+    const key = 'rdp-theme';
+    const root = document.documentElement;
+    const saved = localStorage.getItem(key);
+    if (saved === 'dark') root.classList.add('dark-ui');
+
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      const dark = root.classList.toggle('dark-ui');
+      localStorage.setItem(key, dark ? 'dark' : 'light');
+    });
+  })();
+</script>
+{% endblock %}
+
+{% block usertools %}{% endblock %}
+

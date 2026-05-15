@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vendor Portal — Verify Identity</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue-950: #061c33;
+      --blue-900: #0b2a4a;
+      --blue-700: #134a80;
+      --blue-600: #195f9d;
+      --green-700: #166b42;
+      --green-600: #1f8a57;
+      --green-500: #2ea86b;
+      --green-400: #48c98a;
+      --slate-50:  #f7fafd;
+      --slate-100: #eef3f9;
+      --slate-200: #dce7f0;
+      --slate-600: #4a6278;
+      --slate-800: #1f2d3d;
+      --white:     #ffffff;
+      --danger:    #b91c1c;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: var(--slate-800);
+      background:
+        radial-gradient(ellipse at 15% 20%, rgba(46,168,107,.22) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 80%, rgba(19,74,128,.28) 0%, transparent 50%),
+        linear-gradient(145deg, #071e34 0%, #0e3560 45%, #0f5c38 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .card {
+      width: min(100%, 960px);
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      background: var(--white);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 28px 60px rgba(4,16,30,.45), 0 0 0 1px rgba(255,255,255,.08);
+    }
+
+    .brand {
+      position: relative;
+      padding: 52px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: linear-gradient(160deg, #071e34 0%, #0d3a6b 50%, #0a4a2c 100%);
+      overflow: hidden;
+    }
+    .brand::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        125deg,
+        rgba(255,255,255,.025) 0, rgba(255,255,255,.025) 1px,
+        transparent 1px, transparent 22px
+      );
+      pointer-events: none;
+    }
+    .brand-accent {
+      width: 42px; height: 3px;
+      background: linear-gradient(90deg, var(--green-500), var(--blue-600));
+      border-radius: 2px;
+      margin-bottom: 22px;
+    }
+    .brand-kicker {
+      font-size: 11px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--green-400);
+      margin-bottom: 10px;
+    }
+    .brand-title {
+      font-size: clamp(1.7rem, 2.8vw, 2.3rem);
+      font-weight: 800;
+      color: var(--white);
+      line-height: 1.08;
+      letter-spacing: -.01em;
+      margin-bottom: 18px;
+    }
+    .brand-title span {
+      background: linear-gradient(90deg, var(--green-500), var(--blue-600));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-body {
+      font-size: .93rem;
+      line-height: 1.65;
+      color: rgba(255,255,255,.72);
+      max-width: 28ch;
+    }
+    .brand-footer {
+      margin-top: 36px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,.14);
+      font-size: .8rem;
+      color: rgba(255,255,255,.45);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-footer::before {
+      content: "";
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green-500);
+      flex-shrink: 0;
+    }
+
+    /* ── Verify panel ── */
+    .verify {
+      padding: 52px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: var(--slate-50);
+    }
+    .verify-eyebrow {
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--green-600);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .verify-heading {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--blue-900);
+      margin-bottom: 6px;
+      letter-spacing: -.01em;
+    }
+    .verify-sub {
+      font-size: .87rem;
+      color: var(--slate-600);
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    /* Shield icon */
+    .shield-icon {
+      font-size: 2.8rem;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .errornote {
+      padding: 10px 14px;
+      border-left: 3px solid var(--danger);
+      border-radius: 6px;
+      background: #fef2f2;
+      color: var(--danger);
+      font-size: .85rem;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .warningnote {
+      padding: 10px 14px;
+      border-left: 3px solid #b45309;
+      border-radius: 6px;
+      background: #fffbeb;
+      color: #92400e;
+      font-size: .85rem;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--slate-800);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+
+    /* Big OTP input */
+    .otp-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--slate-200);
+      border-radius: 10px;
+      font-size: 1.8rem;
+      font-weight: 700;
+      font-family: "Consolas", "Courier New", monospace;
+      letter-spacing: .35em;
+      text-align: center;
+      color: var(--blue-900);
+      background: var(--white);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .otp-input:focus {
+      border-color: var(--blue-600);
+      box-shadow: 0 0 0 4px rgba(25,95,157,.15);
+    }
+    .otp-input::placeholder {
+      color: var(--slate-200);
+      letter-spacing: .2em;
+    }
+
+    .submit-row { margin-top: 8px; }
+    .submit-row button[type="submit"] {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      cursor: pointer;
+      background: linear-gradient(95deg, var(--blue-700) 0%, var(--green-600) 100%);
+      color: var(--white);
+      box-shadow: 0 6px 20px rgba(19,74,128,.30);
+      transition: filter .15s, box-shadow .15s;
+    }
+    .submit-row button[type="submit"]:hover {
+      filter: brightness(1.06);
+      box-shadow: 0 8px 26px rgba(19,74,128,.38);
+    }
+
+    .back-link {
+      display: block;
+      margin-top: 16px;
+      text-align: center;
+      font-size: .82rem;
+      color: var(--slate-600);
+    }
+    .back-link a {
+      color: var(--blue-600);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .back-link a:hover { text-decoration: underline; }
+
+    .expiry-note {
+      margin-top: 14px;
+      font-size: .78rem;
+      color: var(--slate-600);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .expiry-note::before {
+      content: "⏱";
+    }
+
+    @media (max-width: 780px) {
+      .card { grid-template-columns: 1fr; }
+      .brand { padding: 36px 28px; }
+      .verify { padding: 36px 28px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+
+    <section class="brand" aria-label="Portal information">
+      <div>
+        <div class="brand-accent"></div>
+        <p class="brand-kicker">Equipment Rental Pipeline</p>
+        <h1 class="brand-title">Summit<br><span>Vendor Portal</span></h1>
+        <p class="brand-body">
+          A one-time code has been sent to your email address on file.
+          Enter it below to complete sign-in.
+        </p>
+      </div>
+      <p class="brand-footer">Authorized personnel only &mdash; activity is logged</p>
+    </section>
+
+    <section class="verify" aria-label="Two-factor verification">
+      <span class="shield-icon" aria-hidden="true">🔐</span>
+      <p class="verify-eyebrow">Two-Factor Authentication</p>
+      <h2 class="verify-heading">Check your email</h2>
+      <p class="verify-sub">
+        We sent a 6-digit code to the email address associated with your account.
+        Enter it below to continue.
+      </p>
+
+      {% if messages %}
+        {% for message in messages %}
+          <p class="warningnote">{{ message }}</p>
+        {% endfor %}
+      {% endif %}
+
+      {% if error %}
+        <p class="errornote">{{ error }}</p>
+      {% endif %}
+
+      <form method="post" autocomplete="off">
+        {% csrf_token %}
+        <div class="field">
+          <label for="id_code">Verification Code</label>
+          <input
+            type="text"
+            id="id_code"
+            name="code"
+            class="otp-input"
+            placeholder="000000"
+            maxlength="6"
+            pattern="\d{6}"
+            inputmode="numeric"
+            autofocus
+            required>
+        </div>
+        <div class="submit-row">
+          <button type="submit">Verify &amp; Sign In</button>
+        </div>
+      </form>
+
+      <p class="expiry-note">Code expires in 10 minutes</p>
+
+      <p class="back-link">
+        Wrong account? <a href="{% url 'portal_login' %}">Back to login</a>
+      </p>
+    </section>
+
+  </main>
+
+  <script>
+    /* Auto-submit when 6 digits are entered */
+    const input = document.getElementById('id_code');
+    input.addEventListener('input', function () {
+      this.value = this.value.replace(/\D/g, '').slice(0, 6);
+      if (this.value.length === 6) {
+        this.closest('form').submit();
+      }
+    });
+  </script>
+</body>
+</html>

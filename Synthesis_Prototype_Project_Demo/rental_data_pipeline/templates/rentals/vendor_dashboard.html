@@ -1,0 +1,1910 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ company_name }} — Vendor Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue-950: #061c33;
+      --blue-900: #0b2a4a;
+      --blue-800: #0f3460;
+      --blue-700: #134a80;
+      --blue-600: #195f9d;
+      --green-700: #166b42;
+      --green-600: #1f8a57;
+      --green-500: #2ea86b;
+      --green-400: #48c98a;
+      --amber:     #d97706;
+      --red:       #b91c1c;
+      --slate-50:  #f7fafd;
+      --slate-100: #eef3f9;
+      --slate-200: #dce7f0;
+      --slate-400: #8a9ab0;
+      --slate-600: #4a6278;
+      --slate-800: #1f2d3d;
+      --white:     #ffffff;
+    }
+    html.dark-ui {
+      --blue-950: #050b14;
+      --blue-900: #0a1425;
+      --blue-800: #0f1f38;
+      --blue-700: #1d4ed8;
+      --blue-600: #3b82f6;
+      --green-700: #14532d;
+      --green-600: #166534;
+      --green-500: #22c55e;
+      --green-400: #4ade80;
+      --amber:     #f59e0b;
+      --red:       #ef4444;
+      --slate-50:  #0f172a;
+      --slate-100: #111827;
+      --slate-200: #1f2937;
+      --slate-400: #94a3b8;
+      --slate-600: #cbd5e1;
+      --slate-800: #e2e8f0;
+      --white:     #0b1220;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 14px;
+      color: var(--slate-800);
+      background: var(--slate-100);
+    }
+
+    /* ═══════════════════════════
+       TOPBAR
+    ═══════════════════════════ */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      height: 56px;
+      background: var(--blue-900);
+      border-bottom: 3px solid var(--green-500);
+      box-shadow: 0 2px 10px rgba(4,16,30,.3);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .topbar-logo {
+      width: 30px; height: 30px; border-radius: 7px;
+      background: linear-gradient(135deg, var(--blue-600), var(--green-600));
+      display: flex; align-items: center; justify-content: center;
+    }
+    .topbar-divider { width: 1px; height: 20px; background: rgba(255,255,255,.18); }
+    .topbar-kicker {
+      font-size: 9px; letter-spacing: .15em; text-transform: uppercase;
+      color: var(--green-400); margin-bottom: 2px; line-height: 1;
+    }
+    .topbar-title { font-size: .95rem; font-weight: 700; color: var(--white); line-height: 1; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .topbar-user { font-size: .75rem; color: rgba(255,255,255,.5); }
+    .nav-btn {
+      padding: 5px 13px; border-radius: 6px; font-size: .78rem; font-weight: 600;
+      text-decoration: none; letter-spacing: .02em;
+      border: 1.5px solid rgba(255,255,255,.22);
+      color: rgba(255,255,255,.82);
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,.08); border-color: var(--green-500); color: var(--green-400); }
+    .nav-btn.danger { border-color: rgba(255,255,255,.22); }
+    .nav-btn.signout {
+      background: var(--green-600); border-color: var(--green-600); color: var(--white);
+    }
+    .nav-btn.signout:hover { background: var(--green-500); border-color: var(--green-500); }
+    .theme-toggle {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1.5px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.9);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .theme-toggle:hover { background: rgba(255,255,255,.12); border-color: var(--green-500); color: var(--green-400); }
+    .theme-toggle .sun { display: none; }
+    html.dark-ui .theme-toggle .sun { display: inline; }
+    html.dark-ui .theme-toggle .moon { display: none; }
+
+    /* ═══════════════════════════
+       HERO STRIP
+    ═══════════════════════════ */
+    .hero {
+      background: linear-gradient(100deg, var(--blue-800) 0%, var(--blue-900) 60%, var(--green-700) 100%);
+      padding: 26px 32px 22px;
+      position: relative; overflow: hidden;
+    }
+    .hero::after {
+      content: "";
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(130deg,
+        rgba(255,255,255,.025) 0, rgba(255,255,255,.025) 1px,
+        transparent 1px, transparent 24px);
+      pointer-events: none;
+    }
+    .hero-inner { position: relative; z-index: 1; max-width: 1320px; margin: 0 auto; }
+    .hero h1 { font-size: 1.35rem; font-weight: 800; color: var(--white); letter-spacing: -.02em; margin-bottom: 3px; }
+    .hero p  { font-size: .82rem; color: rgba(255,255,255,.55); }
+
+    /* ═══════════════════════════
+       PAGE BODY
+    ═══════════════════════════ */
+    .page { max-width: 1320px; margin: 0 auto; padding: 24px 28px 56px; }
+
+    /* ── Alert messages ── */
+    .alert {
+      padding: 11px 16px;
+      border-radius: 8px;
+      font-size: .84rem;
+      font-weight: 500;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .alert-success { background: #f0fdf6; border: 1px solid #a7f3d0; color: var(--green-700); }
+    .alert-error   { background: #fef2f2; border: 1px solid #fca5a5; color: var(--red); }
+    .alert-warning { background: #fffbeb; border: 1px solid #fcd34d; color: var(--amber); }
+
+    /* ═══════════════════════════
+       CYCLE STATUS CARD
+    ═══════════════════════════ */
+    .cycle-card {
+      background: var(--white);
+      border-radius: 14px;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 1px 4px rgba(8,24,40,.07);
+      padding: 20px 26px;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .cycle-info { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+    .cycle-item {}
+    .cycle-label { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--slate-400); margin-bottom: 3px; }
+    .cycle-value { font-size: 1rem; font-weight: 800; color: var(--slate-800); }
+    .cycle-sub   { font-size: .73rem; color: var(--slate-400); margin-top: 1px; }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 14px; border-radius: 20px;
+      font-size: .78rem; font-weight: 700; letter-spacing: .03em;
+    }
+    .status-badge .dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .badge-verified  { background: #f0fdf6; color: var(--green-700); border: 1px solid #a7f3d0; }
+    .badge-verified .dot  { background: var(--green-500); }
+    .badge-pending   { background: #fffbeb; color: var(--amber);      border: 1px solid #fcd34d; }
+    .badge-pending .dot   { background: var(--amber); animation: pulse 1.4s infinite; }
+    .badge-late      { background: #fef2f2; color: var(--red);         border: 1px solid #fca5a5; }
+    .badge-late .dot      { background: var(--red); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .35; }
+    }
+
+    /* No-change button */
+    .btn-no-change {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px; border: none; border-radius: 8px;
+      font-size: .85rem; font-weight: 700; letter-spacing: .02em;
+      cursor: pointer;
+      background: linear-gradient(95deg, var(--blue-700), var(--green-600));
+      color: var(--white);
+      box-shadow: 0 4px 14px rgba(19,74,128,.28);
+      transition: filter .15s, box-shadow .15s;
+      text-decoration: none;
+    }
+    .btn-no-change:hover { filter: brightness(1.07); box-shadow: 0 6px 20px rgba(19,74,128,.36); }
+    .btn-no-change:disabled, .btn-no-change.disabled {
+      background: #c8d5e4; color: #7a8fa5; box-shadow: none; cursor: default;
+    }
+
+    /* ═══════════════════════════
+       TABLE SECTION
+    ═══════════════════════════ */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; flex-wrap: wrap; gap: 10px;
+    }
+    .section-title {
+      font-size: .88rem; font-weight: 800; color: var(--blue-900);
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .record-count {
+      font-size: .75rem; color: var(--slate-400); background: var(--slate-100);
+      padding: 3px 10px; border-radius: 10px; border: 1px solid var(--slate-200);
+    }
+
+    .table-card {
+      background: var(--white);
+      border-radius: 14px;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 1px 4px rgba(8,24,40,.07);
+      overflow: hidden;
+    }
+    .table-scroll { overflow-x: visible; }
+
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .82rem;
+      table-layout: fixed;
+    }
+    table.data thead tr { background: var(--blue-900); }
+    table.data th {
+      color: var(--white); font-weight: 700;
+      padding: 9px 10px; text-align: left;
+      letter-spacing: .05em; font-size: .68rem; text-transform: uppercase;
+      white-space: nowrap;
+    }
+    table.data td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--slate-100);
+      color: var(--slate-800);
+      vertical-align: middle;
+      overflow: hidden;
+    }
+    table.data tbody tr:last-child td { border-bottom: none; }
+    table.data tbody tr:nth-child(even) td { background: var(--slate-50); }
+    table.data tbody tr:hover td { background: #e3edf7; transition: background .12s; }
+
+    .td-id    { font-weight: 700; color: var(--blue-700); font-family: "Consolas", monospace; font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .td-desc  { overflow: hidden; }
+    .td-desc .cell-view { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .td-rate  { font-weight: 700; color: var(--green-700); white-space: nowrap; }
+    .td-date  { white-space: nowrap; color: var(--slate-600); font-size: .79rem; }
+    .cell-view { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .status-pill {
+      display: inline-block; padding: 3px 9px; border-radius: 10px;
+      font-size: .67rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    }
+    .pill-pending  { background: #fffbeb; color: var(--amber);      border: 1px solid #fcd34d; }
+    .pill-approved { background: #f0fdf6; color: var(--green-700);  border: 1px solid #a7f3d0; }
+    .pill-rejected { background: #fef2f2; color: var(--red);         border: 1px solid #fca5a5; }
+    .pill-submitted{ background: #eff6ff; color: var(--blue-700);    border: 1px solid #bfdbfe; }
+
+    .btn-edit {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 13px; border-radius: 6px;
+      font-size: .75rem; font-weight: 600;
+      background: var(--slate-100); color: var(--blue-700);
+      border: 1.5px solid var(--slate-200);
+      text-decoration: none;
+      transition: background .12s, border-color .12s;
+      white-space: nowrap;
+    }
+    .btn-edit:hover { background: #ddeaf8; border-color: var(--blue-600); }
+
+    /* Monthly cycle notice ribbon */
+    .monthly-notice {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px 20px;
+      margin-bottom: 22px;
+      border-radius: 10px;
+      background: #eff6ff;
+      border: 1.5px solid #bfdbfe;
+      color: #1e40af;
+    }
+    html.dark-ui .monthly-notice {
+      background: #1e3a5f;
+      border-color: #3b82f6;
+      color: #93c5fd;
+    }
+    .monthly-notice-icon {
+      flex-shrink: 0;
+      margin-top: 1px;
+      opacity: .85;
+    }
+    .monthly-notice-body {}
+    .monthly-notice-title {
+      font-size: .85rem;
+      font-weight: 800;
+      letter-spacing: .01em;
+      margin-bottom: 3px;
+    }
+    .monthly-notice-text {
+      font-size: .8rem;
+      line-height: 1.55;
+      opacity: .85;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--slate-400);
+    }
+    .empty-state svg { margin-bottom: 12px; opacity: .35; }
+    .empty-state p { font-size: .88rem; }
+
+    /* ═══════════════════════════
+       INLINE EDITING
+    ═══════════════════════════ */
+    .cell-input { display: none; }
+    tr.editing td { background: #e8f2ff !important; }
+    tr.editing .cell-view  { display: none; }
+    tr.editing .cell-input { display: block; }
+    .view-mode  {}
+    .edit-mode  { display: none; }
+    tr.editing .view-mode { display: none !important; }
+    tr.editing .edit-mode { display: flex !important; }
+
+    /* Double-click hint */
+    table.data tbody tr:not(.editing) { cursor: default; }
+    table.data tbody tr:not(.editing):hover td[data-field] { cursor: text; }
+    table.data tbody tr:not(.editing) td[data-field]::after {
+      content: '';
+    }
+    table.data tbody tr:not(.editing):hover td[data-field] .cell-view {
+      text-decoration: underline dotted var(--slate-400);
+      text-underline-offset: 3px;
+    }
+
+    .cell-input {
+      padding: 5px 7px;
+      border: 1.5px solid var(--blue-600);
+      border-radius: 5px;
+      font-size: .81rem;
+      font-family: inherit;
+      color: var(--slate-800);
+      background: var(--white);
+      outline: none;
+      width: 100%;
+      min-width: 60px;
+      box-sizing: border-box;
+    }
+    .cell-input:focus {
+      box-shadow: 0 0 0 3px rgba(25,95,157,.15);
+    }
+    td.td-desc .cell-input { width: 100%; box-sizing: border-box; }
+    td[data-field="rate_daily"] .cell-input  { min-width: 70px; }
+    td[data-field="quantity"]   .cell-input  { min-width: 44px; }
+    td[data-field="on_rent_start"] .cell-input,
+    td[data-field="on_rent_end"]   .cell-input { width: 100%; }
+
+    .field-err {
+      font-size: .68rem;
+      color: var(--red);
+      display: block;
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+    .btn-row-edit {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 13px; border-radius: 6px;
+      font-size: .75rem; font-weight: 600;
+      background: var(--slate-100); color: var(--blue-700);
+      border: 1.5px solid var(--slate-200);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .12s, border-color .12s;
+    }
+    .btn-row-edit:hover { background: #ddeaf8; border-color: var(--blue-600); }
+    .btn-row-save {
+      padding: 5px 13px; border: none; border-radius: 6px;
+      font-size: .75rem; font-weight: 700;
+      background: var(--green-600); color: var(--white);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .12s, opacity .12s;
+    }
+    .btn-row-save:hover { background: var(--green-500); }
+    .btn-row-save:disabled { opacity: .55; cursor: default; }
+    .btn-row-cancel {
+      padding: 5px 10px; border-radius: 6px;
+      font-size: .75rem; font-weight: 600;
+      background: var(--white); color: var(--slate-600);
+      border: 1.5px solid var(--slate-200);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .12s;
+    }
+    .btn-row-cancel:hover { background: var(--slate-100); }
+    .save-flash {
+      font-size: .73rem; font-weight: 700;
+      color: var(--green-600);
+      animation: fadeout 2s forwards;
+    }
+    @keyframes fadeout {
+      0%   { opacity: 1; }
+      70%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* ─── Icon action buttons ─── */
+    .btn-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; border-radius: 7px;
+      border: none; cursor: pointer; transition: background .12s;
+      flex-shrink: 0;
+    }
+    .btn-icon-edit   { background: #e8f2ff; color: var(--blue-700); }
+    .btn-icon-edit:hover   { background: #d0e4f8; }
+    .btn-icon-delete { background: #fef2f2; color: var(--red); }
+    .btn-icon-delete:hover { background: #fde0e0; }
+
+    /* ─── Add Row button ─── */
+    .btn-add-row {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 20px; border: none; border-radius: 8px;
+      font-size: .82rem; font-weight: 700;
+      background: var(--slate-100); color: var(--blue-700);
+      border: 1.5px solid var(--slate-200);
+      cursor: pointer;
+      transition: background .12s, border-color .12s;
+    }
+    .btn-add-row:hover { background: #ddeaf8; border-color: var(--blue-600); }
+    .btn-csv-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 13px; border-radius: 7px; font-size: .76rem; font-weight: 700;
+      background: var(--slate-100); color: var(--blue-700);
+      border: 1.5px solid var(--slate-200); cursor: pointer;
+      transition: background .12s, border-color .12s;
+    }
+    .btn-csv-toggle:hover { background: #ddeaf8; border-color: var(--blue-600); }
+    .btn-csv-toggle.active { background: #ddeaf8; border-color: var(--blue-600); }
+    .btn-submit-report {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 24px; border: none; border-radius: 8px;
+      font-size: .88rem; font-weight: 800;
+      background: linear-gradient(95deg, var(--blue-700), var(--green-600));
+      color: var(--white); cursor: pointer;
+      box-shadow: 0 4px 16px rgba(19,74,128,.28);
+      transition: filter .15s, box-shadow .15s;
+      letter-spacing: .01em;
+    }
+    .btn-submit-report:hover { filter: brightness(1.07); box-shadow: 0 6px 22px rgba(19,74,128,.36); }
+    .submitted-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 8px;
+      font-size: .82rem; font-weight: 700;
+      background: #f0fdf6; color: var(--green-700);
+      border: 1.5px solid #a7f3d0;
+    }
+
+    /* ─── Modals ─── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 500;
+      background: rgba(6,20,38,.55);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(4,16,30,.3);
+      width: 440px; max-width: calc(100vw - 32px);
+      padding: 28px 28px 22px;
+    }
+    .modal-title { font-size: 1rem; font-weight: 800; color: var(--blue-900); margin-bottom: 10px; }
+    .modal-body  { font-size: .88rem; color: var(--slate-600); margin-bottom: 22px; line-height: 1.6; }
+    .modal-body .eq-mono { font-family: "Consolas", monospace; font-weight: 700; color: var(--blue-900); }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-confirm-delete {
+      padding: 8px 20px; border: none; border-radius: 7px;
+      font-size: .84rem; font-weight: 700;
+      background: var(--red); color: var(--white);
+      cursor: pointer; transition: opacity .12s;
+    }
+    .btn-confirm-delete:hover { opacity: .88; }
+    .btn-confirm-delete:disabled { opacity: .5; cursor: default; }
+    .btn-modal-cancel {
+      padding: 8px 16px; border-radius: 7px;
+      font-size: .84rem; font-weight: 600;
+      background: var(--white); color: var(--slate-600);
+      border: 1.5px solid var(--slate-200);
+      cursor: pointer; transition: background .12s;
+    }
+    .btn-modal-cancel:hover { background: var(--slate-100); }
+    /* Add-row modal wider */
+    #addModal .modal { width: 560px; }
+
+    /* ─── Welcome / Changes modal ─── */
+    #welcomeModal .modal { width: 480px; text-align: center; padding: 36px 32px 28px; position: relative; }
+    #welcomeModal .modal-close {
+      position: absolute; top: 12px; right: 14px;
+      background: none; border: none; cursor: pointer;
+      font-size: 1.1rem; line-height: 1; color: var(--slate-400);
+      padding: 4px 6px; border-radius: 4px; transition: color .15s, background .15s;
+    }
+    #welcomeModal .modal-close:hover { color: var(--slate-700); background: var(--slate-100); }
+    #welcomeModal .welcome-icon {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue-700), var(--green-600));
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 18px;
+    }
+    #welcomeModal .modal-title { font-size: 1.05rem; margin-bottom: 8px; }
+    #welcomeModal .modal-body  { margin-bottom: 28px; }
+    .welcome-actions { display: flex; gap: 12px; justify-content: center; }
+    .btn-welcome-yes {
+      flex: 1; max-width: 160px;
+      padding: 10px 0; border: none; border-radius: 8px;
+      font-size: .88rem; font-weight: 700; cursor: pointer;
+      background: var(--slate-100); color: var(--blue-700);
+      border: 1.5px solid var(--slate-200);
+      transition: background .15s, border-color .15s;
+    }
+    .btn-welcome-yes:hover { background: #ddeaf8; border-color: var(--blue-600); }
+    .btn-welcome-no {
+      flex: 1; max-width: 160px;
+      padding: 10px 0; border: none; border-radius: 8px;
+      font-size: .88rem; font-weight: 700; cursor: pointer;
+      background: linear-gradient(95deg, var(--blue-700), var(--green-600));
+      color: var(--white);
+      box-shadow: 0 4px 14px rgba(19,74,128,.26);
+      transition: filter .15s;
+    }
+    .btn-welcome-no:hover  { filter: brightness(1.07); }
+    .btn-welcome-no:disabled { opacity: .55; cursor: default; filter: none; }
+    .welcome-confirm {
+      display: none;
+      flex-direction: column; align-items: center; gap: 10px;
+      padding-top: 4px;
+    }
+    .welcome-confirm-icon {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: #f0fdf6; border: 2px solid #a7f3d0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; color: var(--green-600);
+    }
+    .welcome-confirm-text {
+      font-size: .92rem; font-weight: 700; color: var(--green-700);
+    }
+    .welcome-confirm-sub {
+      font-size: .8rem; color: var(--slate-400); margin-top: -4px;
+    }
+    /* Fade overlay animation */
+    @keyframes wm-fadein  { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+    @keyframes wm-fadeout { from { opacity: 1; } to { opacity: 0; } }
+    #welcomeModal.open .modal { animation: wm-fadein .22s ease; }
+    #welcomeModal.fading { opacity: 0; transition: opacity .35s ease; pointer-events: none; }
+
+    /* ─── CSV Upload panel (above table) ─── */
+    .csv-upload-panel {
+      background: var(--white); border: 1.5px solid var(--slate-200);
+      border-radius: 12px; padding: 20px 24px; margin-bottom: 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .cup-header { margin-bottom: 14px; }
+    .cup-title { font-size: .9rem; font-weight: 700; color: var(--slate-800); margin-bottom: 3px; }
+    .cup-sub   { font-size: .76rem; color: var(--slate-400); }
+    .cup-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+    .wm-drop-zone {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; padding: 22px 20px; border-radius: 10px;
+      border: 2px dashed var(--slate-200); background: var(--slate-50);
+      cursor: pointer; transition: border-color .15s, background .15s;
+      text-align: center;
+    }
+    .wm-drop-zone:hover, .wm-drop-zone.drag-over {
+      border-color: var(--blue-600); background: #eef6ff;
+    }
+    .wm-drop-icon { font-size: 1.8rem; line-height: 1; }
+    .wm-drop-label { font-size: .82rem; color: var(--slate-600); }
+    .wm-drop-label strong { color: var(--blue-700); }
+    .wm-drop-label .chosen-name { font-style: italic; color: var(--green-700); }
+    #wmCsvInput { display: none; }
+    .btn-wm-upload {
+      padding: 9px 22px; border-radius: 7px; font-size: .84rem; font-weight: 700;
+      background: linear-gradient(95deg, var(--blue-700), var(--green-600));
+      color: var(--white); border: none; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(19,74,128,.22); transition: filter .15s, opacity .15s;
+    }
+    .btn-wm-upload:hover:not(:disabled) { filter: brightness(1.08); }
+    .btn-wm-upload:disabled { opacity: .5; cursor: default; }
+    /* Error panel */
+    .wm-error-panel {
+      display: none; margin-top: 14px; border-radius: 8px;
+      background: #fef2f2; border: 1px solid #fecaca; padding: 12px 14px;
+      font-size: .78rem; max-height: 220px; overflow-y: auto;
+    }
+    .wm-error-panel.visible { display: block; }
+    .wm-error-title { font-weight: 700; color: #b91c1c; margin-bottom: 8px; }
+    .wm-error-row { margin-bottom: 6px; }
+    .wm-error-row-num { font-weight: 700; color: #7f1d1d; }
+    .wm-error-list { margin: 2px 0 0 12px; color: #7f1d1d; }
+    .add-form-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 14px 18px; margin-bottom: 20px;
+    }
+    .add-form-group { display: flex; flex-direction: column; gap: 5px; }
+    .add-form-group.full { grid-column: 1 / -1; }
+    .add-form-label {
+      font-size: .69rem; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--slate-600);
+    }
+    .add-form-label .req { color: var(--red); margin-left: 2px; }
+    .add-form-input {
+      padding: 8px 11px; border: 1.5px solid var(--slate-200);
+      border-radius: 6px; font-size: .87rem;
+      font-family: inherit; color: var(--slate-800);
+      outline: none; transition: border-color .15s, box-shadow .15s;
+    }
+    .add-form-input:focus { border-color: var(--blue-600); box-shadow: 0 0 0 3px rgba(25,95,157,.12); }
+    .add-form-input.has-err { border-color: var(--red); }
+    .add-form-select {
+      padding: 8px 11px; border: 1.5px solid var(--slate-200);
+      border-radius: 6px; font-size: .87rem;
+      font-family: inherit; color: var(--slate-800);
+      background: var(--white); outline: none;
+      transition: border-color .15s, box-shadow .15s; cursor: pointer;
+    }
+    .add-form-select:focus { border-color: var(--blue-600); box-shadow: 0 0 0 3px rgba(25,95,157,.12); }
+    .add-form-select.has-err { border-color: var(--red); }
+    .add-field-err { font-size: .7rem; color: var(--red); margin-top: 1px; }
+  </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+        <path d="M3 14l4-5 3 3 3-4 4 6H3z" fill="rgba(255,255,255,.9)"/>
+        <circle cx="15" cy="5" r="2.5" fill="#48c98a"/>
+      </svg>
+    </div>
+    <div class="topbar-divider"></div>
+    <div>
+      <div class="topbar-kicker">Rental Data Pipeline</div>
+      <div class="topbar-title">Vendor Portal</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-user">{{ request.user.username }}</span>
+    <button type="button" id="theme-toggle" class="theme-toggle" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
+      <span class="moon">&#9790;</span><span class="sun">&#9728;</span>
+    </button>
+    <form method="post" action="{% url 'portal_logout' %}" style="margin:0;">
+      {% csrf_token %}
+      <button type="submit" class="nav-btn signout">Sign Out</button>
+    </form>
+  </div>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-inner">
+    <h1>{{ company_name }}</h1>
+    <p>Equipment rental submissions &mdash; Week {{ current_week }}, {{ current_year }}</p>
+  </div>
+</div>
+
+<main class="page">
+
+  <!-- Flash messages -->
+  {% for msg in msg_list %}
+    {% if 'success' in msg.tags %}
+      <div class="alert alert-success">&#10003; {{ msg }}</div>
+    {% elif 'error' in msg.tags %}
+      <div class="alert alert-error">&#9888; {{ msg }}</div>
+    {% else %}
+      <div class="alert alert-warning">&#9432; {{ msg }}</div>
+    {% endif %}
+  {% endfor %}
+
+  <!-- Ahead-of-cycle notice: today is still the prior ISO week -->
+  {% if done_for_now and next_audit %}
+  <div style="margin-bottom:18px;padding:12px 16px;border-radius:8px;
+    background:#fff7ed;border:1px solid #fed7aa;font-size:.84rem;color:#9a3412;
+    display:flex;align-items:center;gap:10px;">
+    <span style="font-size:1.1rem;">&#9200;</span>
+    <span>
+      You&rsquo;re all caught up &mdash; no submission is due yet for the current calendar week.
+      Your next submission window opens on
+      <strong>{{ next_audit.cycle_date|date:"l, N j" }} at 12:00 AM CST</strong>
+      (Week&nbsp;{{ next_audit.cycle_date|date:"W" }}, {{ next_audit.cycle_date|date:"Y" }}).
+    </span>
+  </div>
+  {% endif %}
+
+  <!-- Cycle status card -->
+  <div class="cycle-card">
+    <div class="cycle-info">
+      <div class="cycle-item">
+        <div class="cycle-label">Week</div>
+        <div class="cycle-value">{{ current_week }}</div>
+        <div class="cycle-sub">{{ current_year }}</div>
+      </div>
+      {% if audit %}
+      <div class="cycle-item">
+        <div class="cycle-label">Cycle Date</div>
+        <div class="cycle-value">{{ audit.cycle_date }}</div>
+        <div class="cycle-sub">{{ audit.cadence }}</div>
+      </div>
+      <div class="cycle-item">
+        <div class="cycle-label">Submission Status</div>
+        <div style="margin-top:4px;">
+          {% if audit.verified %}
+            <span class="status-badge badge-verified"><span class="dot"></span>Verified{% if audit.no_change %} — No Changes Declared{% endif %}</span>
+          {% elif audit.is_late %}
+            <span class="status-badge badge-late"><span class="dot"></span>Late</span>
+          {% else %}
+            <span class="status-badge badge-pending"><span class="dot"></span>Pending Submission</span>
+          {% endif %}
+        </div>
+      </div>
+      {% if audit.no_change_declared_at %}
+      <div class="cycle-item">
+        <div class="cycle-label">Declared At</div>
+        <div class="cycle-value" style="font-size:.88rem;">{{ audit.no_change_declared_at|date:"M d, Y H:i" }}</div>
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="cycle-item">
+        <div class="cycle-label">Cycle Status</div>
+        <div class="cycle-value" style="font-size:.85rem;color:var(--slate-400);">No cycle on record</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Submit action -->
+    {% if window_closed %}
+    <span class="btn-no-change disabled" title="The reviewer has published this week — the submission window is closed.">&#128274; Submission Window Closed</span>
+    {% elif audit and not audit.verified %}
+    <button type="button" class="btn-no-change" onclick="openSubmitModal()">
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+      Submit Weekly Report
+    </button>
+    {% elif audit and audit.verified %}
+    <span class="btn-no-change disabled">&#10003; Submission Complete</span>
+    {% endif %}
+  </div>
+
+  {% if audit and audit.cadence == 'monthly' and audit.verified and audit.no_change %}
+  <div class="monthly-notice">
+    <svg class="monthly-notice-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"/></svg>
+    <div class="monthly-notice-body">
+      <div class="monthly-notice-title">No submission required this week</div>
+      <div class="monthly-notice-text">
+        {{ company_name }} is on a <strong>monthly</strong> reporting cycle. A response is only expected at the end of each calendar month.
+        Your data from the most recent submission is shown below for reference &mdash; no action is needed until your next cycle opens.
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if audit and not audit.verified and not window_closed %}
+  <!-- CSV Upload panel (collapsed by default) -->
+  <div id="csvUploadPanel" class="csv-upload-panel" style="display:none;">
+    <div class="cup-header">
+      <div>
+        <div class="cup-title">Upload Rental Data &mdash; Week {{ current_week }}</div>
+        <div class="cup-sub">Upload a CSV to overwrite your current records. Row 1 (headers) is ignored. Submission is rejected if headers or data are invalid.</div>
+      </div>
+    </div>
+    <div class="wm-drop-zone" id="wmDropZone" onclick="document.getElementById('wmCsvInput').click()">
+      <div class="wm-drop-icon">&#128196;</div>
+      <div class="wm-drop-label" id="wmDropLabel">
+        <strong>Click to choose</strong> or drag &amp; drop a .csv file here
+      </div>
+    </div>
+    <input type="file" id="wmCsvInput" accept=".csv,text/csv">
+    <div class="wm-error-panel" id="wmErrorPanel">
+      <div class="wm-error-title" id="wmErrorTitle"></div>
+      <div id="wmErrorBody"></div>
+    </div>
+    <div class="cup-actions">
+      <button class="btn-wm-upload" id="wmUploadBtn" disabled onclick="welcomeUploadSubmit()">&#8593; Upload</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Rental records table -->
+  <div class="section-header">
+    <span class="section-title">Current Rental Equipment</span>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="record-count">{{ staging_rows|length }} record{{ staging_rows|length|pluralize }}</span>
+      {% if audit and not audit.verified %}
+      <button class="btn-csv-toggle" id="csvToggleBtn" onclick="toggleCsvPanel()">&#8593; Upload CSV</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-scroll">
+      <table class="data">
+        <colgroup>
+          <col style="width:3%">
+          <col style="width:9%">
+          <col style="width:14%">
+          <col style="width:8%">
+          <col style="width:4%">
+          <col style="width:8%">
+          <col style="width:8%">
+          <col style="width:8%">
+          <col style="width:10%">
+          <col style="width:11%">
+          <col style="width:9%">
+          <col style="width:8%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Equipment ID</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Qty</th>
+            <th>Monthly Rate</th>
+            <th>On Rent Start</th>
+            <th>On Rent End</th>
+            <th>PO #</th>
+            <th>SN Request #</th>
+            <th>Comments</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in staging_rows %}
+          <tr data-pk="{{ row.pk }}"
+              data-orig-eq-id="{{ row.equipment_id }}"
+              data-orig-desc="{{ row.equipment_description }}"
+              data-orig-category="{{ row.equipment_category }}"
+              data-orig-qty="{{ row.quantity }}"
+              data-orig-rate="{{ row.rate_daily }}"
+              data-orig-start="{{ row.on_rent_start|date:'Y-m-d' }}"
+              data-orig-end="{{ row.on_rent_end|date:'Y-m-d' }}"
+              data-orig-po="{{ row.po_number }}"
+              data-orig-sn="{{ row.sn_request_number }}"
+              data-orig-comments="{{ row.comments }}"
+              ondblclick="enterEditMode(this)"
+              title="Double-click to edit">
+            <td style="color:var(--slate-400);font-size:.75rem;">{{ forloop.counter }}</td>
+
+            <td class="td-id" data-field="equipment_id">
+              <span class="cell-view">{{ row.equipment_id }}</span>
+              <input class="cell-input" type="text" name="equipment_id"
+                     value="{{ row.equipment_id }}" placeholder="e.g. GATX050729">
+              <span class="field-err"></span>
+            </td>
+
+            <td class="td-desc" data-field="equipment_description">
+              <span class="cell-view">{{ row.equipment_description }}</span>
+              <input class="cell-input" type="text" name="equipment_description"
+                     value="{{ row.equipment_description }}">
+              <span class="field-err"></span>
+            </td>
+
+            <td data-field="equipment_category" style="white-space:nowrap;">
+              <span class="cell-view" style="font-size:.8rem;color:var(--slate-600);">{{ row.equipment_category|default:"—" }}</span>
+              <!-- Options are intentionally deferred — populated by enterEditMode() to avoid
+                   rendering 60 <option> nodes × N rows in the initial page DOM. -->
+              <select class="cell-input" name="equipment_category" style="font-size:.8rem;padding:4px 6px;">
+                <option value="{{ row.equipment_category }}">{{ row.equipment_category|default:"— select —" }}</option>
+              </select>
+              <span class="field-err"></span>
+            </td>
+
+            <td data-field="quantity">
+              <span class="cell-view" style="font-weight:700;">{{ row.quantity }}</span>
+              <input class="cell-input" type="number" name="quantity" min="1"
+                     value="{{ row.quantity }}">
+              <span class="field-err"></span>
+            </td>
+
+            <td class="td-rate" data-field="rate_daily">
+              <span class="cell-view">${{ row.rate_daily }}</span>
+              <input class="cell-input" type="text" name="rate_daily"
+                     value="{{ row.rate_daily }}" placeholder="e.g. 1250.00">
+              <span class="field-err"></span>
+            </td>
+
+            <td class="td-date" data-field="on_rent_start">
+              <span class="cell-view">{{ row.on_rent_start|date:"m/d/Y" }}</span>
+              <input class="cell-input" type="date" name="on_rent_start"
+                     value="{{ row.on_rent_start|date:'Y-m-d' }}">
+              <span class="field-err"></span>
+            </td>
+
+            <td class="td-date" data-field="on_rent_end">
+              <span class="cell-view">{{ row.on_rent_end|date:"m/d/Y"|default:"—" }}</span>
+              <input class="cell-input" type="date" name="on_rent_end"
+                     value="{{ row.on_rent_end|date:'Y-m-d' }}">
+              <span class="field-err"></span>
+            </td>
+
+            <td data-field="po_number">
+              <span class="cell-view">{{ row.po_number }}</span>
+              <input class="cell-input" type="text" name="po_number"
+                     value="{{ row.po_number }}" placeholder="PO-12345">
+              <span class="field-err"></span>
+            </td>
+
+            <td data-field="sn_request_number">
+              <span class="cell-view">{{ row.sn_request_number }}</span>
+              <input class="cell-input" type="text" name="sn_request_number"
+                     value="{{ row.sn_request_number }}" placeholder="REQ0012345">
+              <span class="field-err"></span>
+            </td>
+
+            <td data-field="comments" title="{{ row.comments }}">
+              <span class="cell-view">{{ row.comments }}</span>
+              <input class="cell-input" type="text" name="comments"
+                     value="{{ row.comments }}" placeholder="Optional notes">
+              <span class="field-err"></span>
+            </td>
+
+            <td style="white-space:nowrap;">
+              <!-- View mode: icon buttons -->
+              <div class="view-mode" style="display:flex;gap:6px;align-items:center;">
+                <button type="button" class="btn-icon btn-icon-edit" title="Edit row" onclick="enterEditMode(this.closest('tr'))">
+                  <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                </button>
+                <button type="button" class="btn-icon btn-icon-delete" title="Delete row" onclick="openDeleteModal(this)">
+                  <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                </button>
+              </div>
+              <!-- Edit mode -->
+              <div class="edit-mode" style="gap:5px;align-items:center;">
+                <button type="button" class="btn-row-save" onclick="saveRow(this)">Save</button>
+                <button type="button" class="btn-row-cancel" onclick="cancelEdit(this)">Cancel</button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="12">
+              <div class="empty-state">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"/></svg>
+                <p>No staging records found for {{ company_name }}.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Add Row button -->
+  <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <button class="btn-add-row" onclick="openAddModal()">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+      Add Row
+    </button>
+    {% if audit and not audit.verified %}
+    <button type="button" class="btn-submit-report" onclick="openSubmitModal()">
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+      Submit Weekly Report
+    </button>
+    {% elif audit and audit.verified %}
+    <span class="submitted-badge">&#10003; Week {{ current_week }} Submitted</span>
+    {% endif %}
+  </div>
+
+</main>
+
+<!-- Welcome / Changes check modal -->
+{% if audit and not audit.verified %}
+<div id="welcomeModal" class="modal-overlay open" onclick="if(event.target===this)welcomeDismiss()">
+<script>
+  (function(){
+    var key = 'rdp-welcomed-{{ session_key }}-{{ current_year }}-{{ current_week }}';
+    // If there are no staging rows the audit was reset — clear the flag so the modal shows again
+    {% if staging_rows|length == 0 %}
+    sessionStorage.removeItem(key);
+    {% endif %}
+    if (sessionStorage.getItem(key) === '1') {
+      document.getElementById('welcomeModal').classList.remove('open');
+    }
+  })();
+</script>
+  <div class="modal">
+    <button class="modal-close" onclick="welcomeDismiss()" title="Dismiss — answer later">&#10005;</button>
+    <div class="welcome-icon" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+    </div>
+    <!-- Question state -->
+    <div id="welcomeQuestion">
+      <div class="modal-title">Week {{ current_week }} Check-In</div>
+      <div class="modal-body">
+        Have any changes to your rental equipment occurred <strong>since last week</strong>?
+      </div>
+      <div class="welcome-actions">
+        <button class="btn-welcome-yes" onclick="welcomeYes()">Yes &mdash; I have changes</button>
+        <button class="btn-welcome-no" id="welcomeNoBtn" onclick="welcomeNo()">No &mdash; No changes</button>
+      </div>
+    </div>
+    <!-- Confirmation state (shown after No) -->
+    <div class="welcome-confirm" id="welcomeConfirm">
+      <div class="welcome-confirm-icon">&#10003;</div>
+      <div class="welcome-confirm-text">Submission Complete</div>
+      <div class="welcome-confirm-sub">No changes declared for Week {{ current_week }}. Your data has been carried forward.</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Submit Weekly Report modal -->
+<div id="submitModal" class="modal-overlay" onclick="if(event.target===this)closeSubmitModal()">
+  <div class="modal">
+    <div class="modal-title">Submit Weekly Report &mdash; Week {{ current_week }}</div>
+    <div class="modal-body" id="submitModalBody">
+      {% if staging_rows %}
+      You are about to submit <strong>{{ staging_rows|length }} equipment record{{ staging_rows|length|pluralize }}</strong>
+      for <strong>{{ company_name }}</strong> for Week {{ current_week }}, {{ current_year }}.<br><br>
+      Please confirm all rental data shown in the table is accurate and up to date.
+      {% else %}
+      You are about to confirm <strong>no rental changes</strong> for <strong>{{ company_name }}</strong>
+      for Week {{ current_week }}, {{ current_year }}.<br><br>
+      Please confirm there are no active rentals or changes to report this week.
+      {% endif %}
+
+      <!-- Row validation errors -->
+      <div id="submitValidationPanel" style="display:none;margin-top:14px;">
+        <div id="submitValidationTitle" style="font-weight:600;color:#b91c1c;margin-bottom:6px;"></div>
+        <div id="submitValidationBody"></div>
+      </div>
+
+      <!-- Field-change diff vs prior published cycle -->
+      <div id="submitChangeDiffPanel" style="display:none;margin-top:14px;">
+        <div style="font-weight:600;color:#b45309;margin-bottom:8px;font-size:.88rem;">
+          &#9888; The following fields changed since the last published cycle &mdash; please review before submitting:
+        </div>
+        <div id="submitChangeDiffBody" style="max-height:260px;overflow-y:auto;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeSubmitModal()">Go Back</button>
+      <form id="submitForm" method="post" action="{% url 'vendor_declare_no_change' %}" style="margin:0;">
+        {% csrf_token %}
+        {% if not staging_rows %}
+        <input type="hidden" name="has_changes" value="0">
+        {% else %}
+        <input type="hidden" name="has_changes" value="1">
+        {% endif %}
+        <button type="button" id="submitConfirmBtn" class="btn-confirm-delete"
+                style="background:var(--green-600);" onclick="runSubmitValidation()">
+          &#10003; Confirm &amp; Submit
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div id="deleteModal" class="modal-overlay" onclick="if(event.target===this)closeDeleteModal()">
+  <div class="modal">
+    <div class="modal-title">Delete Record?</div>
+    <div class="modal-body">
+      Are you sure you want to permanently delete equipment
+      <span class="eq-mono" id="deleteEquipLabel"></span>?
+      This cannot be undone.
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn-confirm-delete" id="confirmDeleteBtn" onclick="confirmDelete(this)">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Row modal -->
+<div id="addModal" class="modal-overlay" onclick="if(event.target===this)closeAddModal()">
+  <div class="modal">
+    <div class="modal-title">Add New Row</div>
+    <div class="add-form-grid">
+      <div class="add-form-group">
+        <label class="add-form-label" for="add_equipment_id">Equipment ID <span class="req">*</span></label>
+        <input class="add-form-input" type="text" id="add_equipment_id" name="equipment_id" placeholder="e.g. GATX050729">
+        <span class="add-field-err" data-field="equipment_id"></span>
+      </div>
+      <div class="add-form-group">
+        <label class="add-form-label" for="add_quantity">Qty <span class="req">*</span></label>
+        <input class="add-form-input" type="number" id="add_quantity" name="quantity" min="1" placeholder="1">
+        <span class="add-field-err" data-field="quantity"></span>
+      </div>
+      <div class="add-form-group full">
+        <label class="add-form-label" for="add_equipment_description">Description <span class="req">*</span></label>
+        <input class="add-form-input" type="text" id="add_equipment_description" name="equipment_description" placeholder="e.g. 45-ton Lattice Boom Crawler Crane">
+        <span class="add-field-err" data-field="equipment_description"></span>
+      </div>
+      <div class="add-form-group full">
+        <label class="add-form-label" for="add_equipment_category">Equipment Category</label>
+        <select class="add-form-select" id="add_equipment_category" name="equipment_category">
+          <option value="">-- Select category --</option>
+          {% for cat in equipment_categories %}
+          <option value="{{ cat }}">{{ cat }}</option>
+          {% endfor %}
+        </select>
+        <span class="add-field-err" data-field="equipment_category"></span>
+      </div>
+      <div class="add-form-group">
+        <label class="add-form-label" for="add_rate_daily">Monthly Rate <span class="req">*</span></label>
+        <input class="add-form-input" type="text" id="add_rate_daily" name="rate_daily" placeholder="e.g. 1250.00">
+        <span class="add-field-err" data-field="rate_daily"></span>
+      </div>
+      <div class="add-form-group">
+        <label class="add-form-label" for="add_on_rent_start">On Rent Start <span class="req">*</span></label>
+        <input class="add-form-input" type="date" id="add_on_rent_start" name="on_rent_start">
+        <span class="add-field-err" data-field="on_rent_start"></span>
+      </div>
+      <div class="add-form-group">
+        <label class="add-form-label" for="add_on_rent_end">On Rent End</label>
+        <input class="add-form-input" type="date" id="add_on_rent_end" name="on_rent_end">
+        <span class="add-field-err" data-field="on_rent_end"></span>
+      </div>
+      <div class="add-form-group">
+        <label class="add-form-label" for="add_po_number">PO Number <span class="req">*</span></label>
+        <input class="add-form-input" type="text" id="add_po_number" name="po_number" placeholder="e.g. PO-12345" required>
+        <span class="add-field-err" data-field="po_number"></span>
+      </div>
+      <div class="add-form-group">
+        <label class="add-form-label" for="add_sn_request_number">SN Request # <span class="req">*</span></label>
+        <input class="add-form-input" type="text" id="add_sn_request_number" name="sn_request_number" placeholder="e.g. RITM0012345" required>
+        <span class="add-field-err" data-field="sn_request_number"></span>
+      </div>
+      <div class="add-form-group full">
+        <label class="add-form-label" for="add_comments">Comments</label>
+        <textarea class="add-form-input" id="add_comments" name="comments" placeholder="Optional notes" rows="2" style="resize:vertical;"></textarea>
+        <span class="add-field-err" data-field="comments"></span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeAddModal()">Cancel</button>
+      <button class="btn-confirm-delete" style="background:var(--green-600);" id="confirmAddBtn" onclick="submitAddRow(this)">Add Row</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── CSRF token from cookie ── */
+  function getCsrf() {
+    const c = document.cookie.split(';').find(s => s.trim().startsWith('csrftoken='));
+    return c ? c.trim().split('=')[1] : '';
+  }
+
+  /* ── Format ISO date → "01/23/2026" ── */
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const [y, m, d] = iso.split('-');
+    return `${m}/${d}/${y}`;
+  }
+
+  /* ── Enter edit mode — accepts the <tr> itself (from ondblclick) ── */
+  function enterEditMode(tr) {
+    if (tr.classList.contains('editing')) return;
+    tr.classList.add('editing');
+    // Lazy-populate the category dropdown on first edit entry.
+    // Options are deferred from template render to avoid N×60 <option> nodes.
+    const catSel = tr.querySelector('select[name="equipment_category"]');
+    if (catSel && !catSel.dataset.populated) {
+      const currentVal = tr.dataset.origCategory || catSel.value || '';
+      catSel.innerHTML = '<option value="">\u2014 select \u2014</option>' +
+        APPROVED_CATEGORIES.map(function(c) {
+          const escaped = c.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          return '<option value="' + escaped + '"' + (c === currentVal ? ' selected' : '') + '>' + escaped + '</option>';
+        }).join('');
+      catSel.value = currentVal;
+      catSel.dataset.populated = '1';
+    }
+    // Focus the first editable input
+    const first = tr.querySelector('.cell-input');
+    if (first) first.focus();
+  }
+
+  /* ── Cancel: restore originals and exit ── */
+  function cancelEdit(btn) {
+    const tr = btn.closest('tr');
+    // Restore input values from data-orig-* attributes
+    const map = {
+      equipment_id:          tr.dataset.origEqId,
+      equipment_description: tr.dataset.origDesc,
+      quantity:              tr.dataset.origQty,
+      rate_daily:            tr.dataset.origRate,
+      on_rent_start:         tr.dataset.origStart,
+      on_rent_end:           tr.dataset.origEnd,
+      po_number:             tr.dataset.origPo,
+      sn_request_number:     tr.dataset.origSn,
+      comments:              tr.dataset.origComments,
+      equipment_category:    tr.dataset.origCategory,
+    };
+    tr.querySelectorAll('.cell-input').forEach(inp => {
+      inp.value = map[inp.name] ?? inp.value;
+    });
+    // Also restore select elements
+    tr.querySelectorAll('select.cell-input').forEach(sel => {
+      sel.value = map[sel.name] ?? sel.value;
+    });
+    // Clear any error messages
+    tr.querySelectorAll('.field-err').forEach(el => el.textContent = '');
+    tr.classList.remove('editing');
+  }
+
+  /* ── Save: POST to inline-save endpoint, update cells on success ── */
+  async function saveRow(btn) {
+    const tr    = btn.closest('tr');
+    const pk    = tr.dataset.pk;
+    const csrf  = getCsrf();
+
+    // Clear previous errors
+    tr.querySelectorAll('.field-err').forEach(el => el.textContent = '');
+
+    // Collect field values
+    const body = new URLSearchParams({ csrfmiddlewaretoken: csrf });
+    tr.querySelectorAll('.cell-input').forEach(inp => body.append(inp.name, inp.value));
+    tr.querySelectorAll('select.cell-input').forEach(sel => body.set(sel.name, sel.value));
+
+    btn.textContent = 'Saving…';
+    btn.disabled    = true;
+
+    let saveSucceeded = false;
+    try {
+      const resp = await fetch(`/vendor/inline-save/${pk}/`, {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken':  csrf,
+        },
+        body: body.toString(),
+      });
+
+      let data;
+      try { data = await resp.json(); } catch (_) { data = { ok: false, errors: { __all__: 'Server error — please try again.' } }; }
+
+      if (data.ok) {
+        saveSucceeded = true;
+        /* ── Update cell display text ── */
+        const updates = {
+          equipment_id:          data.equipment_id,
+          equipment_description: data.equipment_description,
+          equipment_category:    data.equipment_category || '—',
+          quantity:              String(data.quantity),
+          rate_daily:            '$' + parseFloat(data.rate_daily).toFixed(2),
+          on_rent_start:         fmtDate(data.on_rent_start),
+          on_rent_end:           fmtDate(data.on_rent_end),
+          po_number:             data.po_number,
+          sn_request_number:     data.sn_request_number,
+          comments:              data.comments,
+        };
+        tr.querySelectorAll('[data-field]').forEach(td => {
+          const key = td.dataset.field;
+          if (key in updates) {
+            const view = td.querySelector('.cell-view');
+            if (view) view.textContent = updates[key];
+          }
+        });
+
+        /* ── Refresh data-orig-* for future cancels ── */
+        tr.dataset.origEqId      = data.equipment_id;
+        tr.dataset.origDesc      = data.equipment_description;
+        tr.dataset.origCategory  = data.equipment_category || '';
+        tr.dataset.origQty       = data.quantity;
+        tr.dataset.origRate      = data.rate_daily;
+        tr.dataset.origStart     = data.on_rent_start;
+        tr.dataset.origEnd       = data.on_rent_end;
+        tr.dataset.origPo        = data.po_number;
+        tr.dataset.origSn        = data.sn_request_number;
+        tr.dataset.origComments  = data.comments;
+
+        tr.classList.remove('editing');
+
+        /* ── Brief "Saved ✓" flash ── */
+        const flash = document.createElement('span');
+        flash.className   = 'save-flash';
+        flash.textContent = ' Saved ✓';
+        const editModeEl = tr.querySelector('.edit-mode');
+        if (editModeEl) editModeEl.after(flash);
+        setTimeout(() => flash.remove(), 2200);
+
+      } else {
+        /* ── Show field-level errors ── */
+        Object.entries(data.errors || {}).forEach(([field, msg]) => {
+          if (field === '__all__') return; // handled below
+          const td = tr.querySelector(`[data-field="${field}"]`);
+          const errEl = td ? td.querySelector('.field-err') : null;
+          if (errEl) errEl.textContent = msg;
+        });
+        /* Show __all__ or network-level errors at the top of the row's action cell */
+        const allErr = (data.errors || {}).__all__;
+        if (allErr) {
+          const actionCell = tr.querySelector('.edit-mode');
+          if (actionCell) {
+            let allErrEl = actionCell.querySelector('.row-all-err');
+            if (!allErrEl) {
+              allErrEl = document.createElement('div');
+              allErrEl.className = 'row-all-err';
+              allErrEl.style.cssText = 'color:#b91c1c;font-size:.75rem;margin-top:4px;';
+              actionCell.appendChild(allErrEl);
+            }
+            allErrEl.textContent = allErr;
+          }
+        }
+      }
+
+    } catch (err) {
+      /* Network-level failure */
+      const actionCell = tr.querySelector('.edit-mode');
+      if (actionCell) {
+        let allErrEl = actionCell.querySelector('.row-all-err');
+        if (!allErrEl) {
+          allErrEl = document.createElement('div');
+          allErrEl.className = 'row-all-err';
+          allErrEl.style.cssText = 'color:#b91c1c;font-size:.75rem;margin-top:4px;';
+          actionCell.appendChild(allErrEl);
+        }
+        allErrEl.textContent = 'Network error — please try again.';
+      }
+    } finally {
+      /* Always restore the button unless save succeeded (row exits edit mode) */
+      if (!saveSucceeded) {
+        btn.textContent = 'Save';
+        btn.disabled    = false;
+      }
+    }
+  }
+
+  /* ═══════════════════════════════════════
+     SUBMIT MODAL
+  ═══════════════════════════════════════ */
+  function openSubmitModal() {
+    /* Reset validation state each time modal opens */
+    const panel = document.getElementById('submitValidationPanel');
+    if (panel) panel.style.display = 'none';
+    const diffPanel = document.getElementById('submitChangeDiffPanel');
+    if (diffPanel) diffPanel.style.display = 'none';
+    const btn = document.getElementById('submitConfirmBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '\u2713 Confirm & Submit';
+      btn.onclick = runSubmitValidation;
+    }
+    document.getElementById('submitModal').classList.add('open');
+  }
+  function closeSubmitModal() {
+    document.getElementById('submitModal').classList.remove('open');
+  }
+
+  async function runSubmitValidation() {
+    {% if not staging_rows %}
+    /* No rows — skip validation, go straight to change check */
+    await runChangeCheck(document.getElementById('submitConfirmBtn'));
+    return;
+    {% endif %}
+
+    const btn   = document.getElementById('submitConfirmBtn');
+    const panel = document.getElementById('submitValidationPanel');
+    const title = document.getElementById('submitValidationTitle');
+    const body  = document.getElementById('submitValidationBody');
+
+    btn.disabled = true;
+    btn.textContent = 'Validating…';
+    panel.style.display = 'none';
+    document.getElementById('submitChangeDiffPanel').style.display = 'none';
+
+    try {
+      const resp = await fetch('/vendor/validate/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() },
+      });
+      const data = await resp.json();
+
+      if (data.ok) {
+        /* All rows clean — now check for field-level changes vs prior cycle */
+        await runChangeCheck(btn);
+      } else {
+        const rowErrors = data.row_errors || [];
+        title.textContent = `${rowErrors.length} row${rowErrors.length !== 1 ? 's' : ''} failed validation — correct before submitting`;
+        body.innerHTML = rowErrors.map(re =>
+          `<div class="wm-error-row">
+             <span class="wm-error-row-num">Row ${re.row} &mdash; ${re.equipment_id}:</span>
+             <ul class="wm-error-list">${re.errors.map(e => `<li>${e}</li>`).join('')}</ul>
+           </div>`
+        ).join('');
+        panel.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '\u2713 Confirm & Submit';
+      }
+    } catch (err) {
+      title.textContent = 'Network error — could not validate rows.';
+      body.innerHTML = '';
+      panel.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '\u2713 Confirm & Submit';
+    }
+  }
+
+  async function runChangeCheck(btn) {
+    btn.disabled = true;
+    btn.textContent = 'Checking for changes…';
+    const diffPanel = document.getElementById('submitChangeDiffPanel');
+    const diffBody  = document.getElementById('submitChangeDiffBody');
+    try {
+      const resp = await fetch('/vendor/change-check/');
+      const data = await resp.json();
+      if (data.ok && data.changes && data.changes.length > 0) {
+        /* Group by equipment_id */
+        const byEq = {};
+        data.changes.forEach(c => {
+          if (!byEq[c.equipment_id]) byEq[c.equipment_id] = [];
+          byEq[c.equipment_id].push(c);
+        });
+        diffBody.innerHTML = Object.entries(byEq).map(([eqId, rows]) =>
+          `<div style="margin-bottom:10px;">
+             <div style="font-weight:600;font-family:monospace;font-size:.82rem;margin-bottom:4px;">${eqId}</div>
+             <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+               <thead><tr style="background:#fef3c7;">
+                 <th style="text-align:left;padding:3px 8px;border:1px solid #fde68a;">Field</th>
+                 <th style="text-align:left;padding:3px 8px;border:1px solid #fde68a;">Previous</th>
+                 <th style="text-align:left;padding:3px 8px;border:1px solid #fde68a;">Current</th>
+               </tr></thead>
+               <tbody>${rows.map(r =>
+                 `<tr>
+                   <td style="padding:3px 8px;border:1px solid #fde68a;">${r.field}</td>
+                   <td style="padding:3px 8px;border:1px solid #fde68a;color:#dc2626;">${r.old || '\u2014'}</td>
+                   <td style="padding:3px 8px;border:1px solid #fde68a;color:#16a34a;">${r.new || '\u2014'}</td>
+                 </tr>`
+               ).join('')}</tbody>
+             </table>
+           </div>`
+        ).join('');
+        diffPanel.style.display = 'block';
+        /* Let the vendor acknowledge and click again to actually submit */
+        btn.disabled = false;
+        btn.textContent = 'I Acknowledge — Submit Anyway';
+        btn.style.background = 'var(--amber-600, #d97706)';
+        btn.onclick = () => document.getElementById('submitForm').submit();
+      } else {
+        /* No changes — submit directly */
+        document.getElementById('submitForm').submit();
+      }
+    } catch (_) {
+      /* If change check fails, proceed anyway */
+      document.getElementById('submitForm').submit();
+    }
+  }
+
+  /* ═══════════════════════════════════════
+     DELETE MODAL
+  ═══════════════════════════════════════ */
+  let _deletePk = null;
+
+  function openDeleteModal(btn) {
+    const tr = btn.closest('tr');
+    _deletePk = tr.dataset.pk;
+    const equipId = tr.querySelector('[data-field="equipment_id"] .cell-view').textContent.trim();
+    document.getElementById('deleteEquipLabel').textContent = equipId;
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.textContent = 'Delete';
+    confirmBtn.disabled    = false;
+    document.getElementById('deleteModal').classList.add('open');
+  }
+
+  function closeDeleteModal() {
+    _deletePk = null;
+    document.getElementById('deleteModal').classList.remove('open');
+  }
+
+  async function confirmDelete(btn) {
+    if (!_deletePk) return;
+    btn.textContent = 'Deleting…';
+    btn.disabled    = true;
+    const csrf = getCsrf();
+    try {
+      const resp = await fetch(`/vendor/delete/${_deletePk}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body:   `csrfmiddlewaretoken=${encodeURIComponent(csrf)}`,
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        const tr = document.querySelector(`tr[data-pk="${_deletePk}"]`);
+        if (tr) tr.remove();
+        /* Renumber remaining rows */
+        document.querySelectorAll('table.data tbody tr[data-pk]').forEach((row, i) => {
+          row.cells[0].textContent = i + 1;
+        });
+        /* Update record count badge */
+        const countEl = document.querySelector('.record-count');
+        if (countEl) {
+          const n = document.querySelectorAll('table.data tbody tr[data-pk]').length;
+          countEl.textContent = `${n} record${n !== 1 ? 's' : ''}`;
+        }
+        closeDeleteModal();
+      } else {
+        btn.textContent = 'Delete';
+        btn.disabled    = false;
+        alert(Object.values(data.errors || {}).join('\n') || 'Delete failed.');
+      }
+    } catch (err) {
+      btn.textContent = 'Delete';
+      btn.disabled    = false;
+      alert('Network error — please try again.');
+    }
+  }
+
+  /* ═══════════════════════════════════════
+     ADD ROW MODAL
+  ═══════════════════════════════════════ */
+  function openAddModal() {
+    /* Clear form */
+    document.querySelectorAll('#addModal .add-form-input').forEach(el => {
+      el.value = '';
+      el.classList.remove('has-err');
+    });
+    document.querySelectorAll('#addModal .add-form-select').forEach(el => {
+      el.selectedIndex = 0;
+      el.classList.remove('has-err');
+    });
+    document.querySelectorAll('#addModal .add-field-err').forEach(el => el.textContent = '');
+    const btn = document.getElementById('confirmAddBtn');
+    btn.textContent = 'Add Row';
+    btn.disabled    = false;
+    document.getElementById('addModal').classList.add('open');
+    document.getElementById('add_equipment_id').focus();
+  }
+
+  function closeAddModal() {
+    document.getElementById('addModal').classList.remove('open');
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  const APPROVED_CATEGORIES = {{ equipment_categories_json|safe }};
+
+  function buildRowHtml(data, rowNum) {
+    const pencilSvg = `<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>`;
+    const trashSvg  = `<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>`;
+    // Build select options for category
+    function CATEGORY_OPTIONS(selected) {
+      return APPROVED_CATEGORIES.map(c =>
+        `<option value="${escHtml(c)}"${c === selected ? ' selected' : ''}>${escHtml(c)}</option>`
+      ).join('');
+    }
+    return `
+      <td style="color:#8a9ab0;font-size:.75rem;">${rowNum}</td>
+      <td class="td-id" data-field="equipment_id">
+        <span class="cell-view">${escHtml(data.equipment_id)}</span>
+        <input class="cell-input" type="text" name="equipment_id" value="${escHtml(data.equipment_id)}" placeholder="e.g. GATX050729">
+        <span class="field-err"></span>
+      </td>
+      <td class="td-desc" data-field="equipment_description">
+        <span class="cell-view">${escHtml(data.equipment_description)}</span>
+        <input class="cell-input" type="text" name="equipment_description" value="${escHtml(data.equipment_description)}">
+        <span class="field-err"></span>
+      </td>
+      <td data-field="equipment_category" style="white-space:nowrap;">
+        <span class="cell-view" style="font-size:.8rem;color:#64748b;">${escHtml(data.equipment_category || '\u2014')}</span>
+        <select class="cell-input" name="equipment_category" style="font-size:.8rem;padding:4px 6px;">
+          <option value="">\u2014 select \u2014</option>
+          ${CATEGORY_OPTIONS(data.equipment_category || '')}
+        </select>
+        <span class="field-err"></span>
+      </td>
+      <td data-field="quantity">
+        <span class="cell-view" style="font-weight:700;">${data.quantity}</span>
+        <input class="cell-input" type="number" name="quantity" min="1" value="${data.quantity}">
+        <span class="field-err"></span>
+      </td>
+      <td class="td-rate" data-field="rate_daily">
+        <span class="cell-view">$${parseFloat(data.rate_daily).toFixed(2)}</span>
+        <input class="cell-input" type="text" name="rate_daily" value="${data.rate_daily}" placeholder="e.g. 1250.00">
+        <span class="field-err"></span>
+      </td>
+      <td class="td-date" data-field="on_rent_start">
+        <span class="cell-view">${fmtDate(data.on_rent_start)}</span>
+        <input class="cell-input" type="date" name="on_rent_start" value="${data.on_rent_start}">
+        <span class="field-err"></span>
+      </td>
+      <td class="td-date" data-field="on_rent_end">
+        <span class="cell-view">${fmtDate(data.on_rent_end)}</span>
+        <input class="cell-input" type="date" name="on_rent_end" value="${data.on_rent_end}">
+        <span class="field-err"></span>
+      </td>
+      <td data-field="po_number">
+        <span class="cell-view">${escHtml(data.po_number || '')}</span>
+        <input class="cell-input" type="text" name="po_number" value="${escHtml(data.po_number || '')}" placeholder="PO-12345">
+        <span class="field-err"></span>
+      </td>
+      <td data-field="sn_request_number">
+        <span class="cell-view">${escHtml(data.sn_request_number || '')}</span>
+        <input class="cell-input" type="text" name="sn_request_number" value="${escHtml(data.sn_request_number || '')}" placeholder="REQ0012345">
+        <span class="field-err"></span>
+      </td>
+      <td data-field="comments" style="max-width:180px;">
+        <span class="cell-view" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">${escHtml(data.comments || '')}</span>
+        <input class="cell-input" type="text" name="comments" value="${escHtml(data.comments || '')}" placeholder="Optional notes">
+        <span class="field-err"></span>
+      </td>
+      <td style="white-space:nowrap;">
+        <div class="view-mode" style="display:flex;gap:6px;align-items:center;">
+          <button type="button" class="btn-icon btn-icon-edit" title="Edit row" onclick="enterEditMode(this.closest('tr'))">${pencilSvg}</button>
+          <button type="button" class="btn-icon btn-icon-delete" title="Delete row" onclick="openDeleteModal(this)">${trashSvg}</button>
+        </div>
+        <div class="edit-mode" style="gap:5px;align-items:center;">
+          <button type="button" class="btn-row-save" onclick="saveRow(this)">Save</button>
+          <button type="button" class="btn-row-cancel" onclick="cancelEdit(this)">Cancel</button>
+        </div>
+      </td>`;
+  }
+
+  async function submitAddRow(btn) {
+    /* Clear previous errors */
+    document.querySelectorAll('#addModal .add-form-input').forEach(el => el.classList.remove('has-err'));
+    document.querySelectorAll('#addModal .add-field-err').forEach(el => el.textContent = '');
+
+    const csrf = getCsrf();
+    const body = new URLSearchParams({ csrfmiddlewaretoken: csrf });
+    document.querySelectorAll('#addModal .add-form-input').forEach(inp => body.append(inp.name, inp.value));
+    document.querySelectorAll('#addModal .add-form-select').forEach(sel => body.append(sel.name, sel.value));
+
+    btn.textContent = 'Adding…';
+    btn.disabled    = true;
+
+    try {
+      const resp = await fetch('/vendor/add-row/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf },
+        body:   body.toString(),
+      });
+      const data = await resp.json();
+
+      if (data.ok) {
+        const tbody  = document.querySelector('table.data tbody');
+        const rowNum = tbody.querySelectorAll('tr[data-pk]').length + 1;
+
+        /* Remove empty-state placeholder if present */
+        const emptyRow = tbody.querySelector('.empty-state');
+        if (emptyRow) emptyRow.closest('tr').remove();
+
+        const tr = document.createElement('tr');
+        tr.dataset.pk           = data.pk;
+        tr.dataset.origEqId     = data.equipment_id;
+        tr.dataset.origDesc     = data.equipment_description;
+        tr.dataset.origQty      = data.quantity;
+        tr.dataset.origRate     = data.rate_daily;
+        tr.dataset.origStart    = data.on_rent_start;
+        tr.dataset.origEnd      = data.on_rent_end;
+        tr.dataset.origPo       = data.po_number;
+        tr.dataset.origSn       = data.sn_request_number;
+        tr.dataset.origComments = data.comments;
+        tr.setAttribute('ondblclick', 'enterEditMode(this)');
+        tr.title    = 'Double-click to edit';
+        tr.innerHTML = buildRowHtml(data, rowNum);
+        tbody.appendChild(tr);
+
+        /* Update record count badge */
+        const countEl = document.querySelector('.record-count');
+        if (countEl) {
+          const n = tbody.querySelectorAll('tr[data-pk]').length;
+          countEl.textContent = `${n} record${n !== 1 ? 's' : ''}`;
+        }
+        closeAddModal();
+      } else {
+        Object.entries(data.errors || {}).forEach(([field, msg]) => {
+          const inp = document.querySelector(`#addModal [name="${field}"]`);
+          const err = document.querySelector(`#addModal .add-field-err[data-field="${field}"]`);
+          if (inp) inp.classList.add('has-err');
+          if (err) err.textContent = msg;
+        });
+        btn.textContent = 'Add Row';
+        btn.disabled    = false;
+      }
+    } catch (err) {
+      btn.textContent = 'Add Row';
+      btn.disabled    = false;
+      alert('Network error — please try again.');
+    }
+  }
+
+  /* ── Double-click outside the table auto-saves the active editing row ── */
+  document.addEventListener('dblclick', function (e) {
+    const editingRow = document.querySelector('table.data tbody tr.editing');
+    if (!editingRow) return;
+    if (e.target.closest('table.data')) return;
+    const saveBtn = editingRow.querySelector('.btn-row-save');
+    if (saveBtn && !saveBtn.disabled) saveBtn.click();
+  });
+
+  /* ═══════════════════════════════════════
+     WELCOME MODAL — Changes check on load
+  ═══════════════════════════════════════ */
+  function toggleCsvPanel() {
+    const panel = document.getElementById('csvUploadPanel');
+    const btn   = document.getElementById('csvToggleBtn');
+    if (!panel) return;
+    const open = panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : 'block';
+    if (btn) btn.classList.toggle('active', !open);
+  }
+
+  function _closeWelcomeModal() {
+    const overlay = document.getElementById('welcomeModal');
+    if (!overlay) return;
+    overlay.classList.add('fading');
+    setTimeout(() => overlay.classList.remove('open', 'fading'), 380);
+  }
+
+  function welcomeDismiss() {
+    /* Vendor closes without answering — modal won't reappear this browser session */
+    sessionStorage.setItem('rdp-welcomed-{{ session_key }}-{{ current_year }}-{{ current_week }}', '1');
+    _closeWelcomeModal();
+  }
+
+  function welcomeYes() {
+    /* Vendor has changes — close modal; upload panel is visible above the table */
+    sessionStorage.setItem('rdp-welcomed-{{ session_key }}-{{ current_year }}-{{ current_week }}', '1');
+    _closeWelcomeModal();
+  }
+
+  /* File picker wiring */
+  (function () {
+    const input = document.getElementById('wmCsvInput');
+    const dropZone = document.getElementById('wmDropZone');
+    if (!input) return;
+
+    function setFile(file) {
+      if (!file) return;
+      document.getElementById('wmDropLabel').innerHTML =
+        `<span class="chosen-name">&#128196; ${file.name}</span> — <strong>ready to upload</strong>`;
+      document.getElementById('wmUploadBtn').disabled = false;
+      document.getElementById('wmErrorPanel').classList.remove('visible');
+    }
+
+    input.addEventListener('change', () => setFile(input.files[0]));
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) { input.files = e.dataTransfer.files; setFile(file); }
+    });
+  })();
+
+  async function welcomeUploadSubmit() {
+    const input    = document.getElementById('wmCsvInput');
+    const uploadBtn = document.getElementById('wmUploadBtn');
+    const errPanel = document.getElementById('wmErrorPanel');
+    const errTitle = document.getElementById('wmErrorTitle');
+    const errBody  = document.getElementById('wmErrorBody');
+
+    if (!input.files || !input.files[0]) return;
+
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading…';
+    errPanel.classList.remove('visible');
+
+    const formData = new FormData();
+    formData.append('csv_file', input.files[0]);
+    formData.append('csrfmiddlewaretoken', getCsrf());
+
+    try {
+      const resp = await fetch('/vendor/csv-upload/', { method: 'POST', body: formData });
+      const data = await resp.json();
+
+      if (data.ok) {
+        /* Success — reload so the table reflects the uploaded rows; audit stays pending */
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = '\u2713 Uploaded — refreshing…';
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        /* Build error panel */
+        const headerErrors = data.header_errors || [];
+        const rowErrors    = data.row_errors    || [];
+
+        let titleText = '';
+        let bodyHtml  = '';
+
+        if (headerErrors.length) {
+          titleText = 'Header Error — Upload Rejected';
+          bodyHtml  = headerErrors.map(e => `<div>&#9679; ${e}</div>`).join('');
+        } else if (rowErrors.length) {
+          titleText = `${rowErrors.length} row${rowErrors.length !== 1 ? 's' : ''} failed validation — please correct and re-upload`;
+          bodyHtml  = rowErrors.map(re =>
+            `<div class="wm-error-row">
+               <span class="wm-error-row-num">Row ${re.row}:</span>
+               <ul class="wm-error-list">${re.errors.map(e => `<li>${e}</li>`).join('')}</ul>
+             </div>`
+          ).join('');
+        } else {
+          titleText = 'Upload Failed';
+          bodyHtml  = `<div>${data.error || 'An unexpected error occurred.'}</div>`;
+        }
+
+        errTitle.textContent = titleText;
+        errBody.innerHTML    = bodyHtml;
+        errPanel.classList.add('visible');
+
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload';
+      }
+    } catch (err) {
+      errTitle.textContent = 'Network Error';
+      errBody.innerHTML    = '<div>Could not reach the server. Please try again.</div>';
+      errPanel.classList.add('visible');
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload';
+    }
+  }
+
+  async function welcomeNo() {
+    const btn = document.getElementById('welcomeNoBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    const csrf = getCsrf();
+    try {
+      const resp = await fetch('/vendor/no-change-ajax/', {
+        method:  'POST',
+        headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body:    `csrfmiddlewaretoken=${encodeURIComponent(csrf)}`,
+      });
+      const data = await resp.json();
+
+      if (data.ok) {
+        /* Show confirmation state inside modal */
+        document.getElementById('welcomeQuestion').style.display = 'none';
+        const confirm = document.getElementById('welcomeConfirm');
+        confirm.style.display = 'flex';
+
+        /* Update the status badge on the page behind the modal */
+        const badge = document.querySelector('.status-badge');
+        if (badge) {
+          badge.className = 'status-badge badge-verified';
+          badge.innerHTML = '<span class="dot"></span>Verified &mdash; No Changes Declared';
+        }
+        /* Swap the Submit button to the disabled "complete" state */
+        document.querySelectorAll('.btn-no-change, .btn-submit-report').forEach(el => {
+          el.classList.add('disabled');
+          el.textContent = '✓ Submission Complete';
+          el.setAttribute('disabled', true);
+        });
+
+        /* Fade out modal after brief confirmation pause */
+        setTimeout(() => _closeWelcomeModal(), 2000);
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'No — No changes';
+        alert(data.error || 'Something went wrong. Please try again.');
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'No — No changes';
+      alert('Network error — please try again.');
+    }
+  }
+
+  (function () {
+    const key = 'rdp-theme';
+    const root = document.documentElement;
+    const saved = localStorage.getItem(key);
+    if (saved === 'dark') root.classList.add('dark-ui');
+
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      const dark = root.classList.toggle('dark-ui');
+      localStorage.setItem(key, dark ? 'dark' : 'light');
+    });
+  })();
+</script>
+</body>
+</html>

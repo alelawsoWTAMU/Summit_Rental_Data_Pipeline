@@ -1,0 +1,1316 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Week {{ current_week }} Review — Rental Data Pipeline</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue-900: #0b2a4a; --blue-800: #0f3460; --blue-700: #134a80; --blue-600: #195f9d;
+      --green-700: #166b42; --green-600: #1f8a57; --green-500: #2ea86b; --green-400: #48c98a;
+      --amber: #d97706; --red: #b91c1c;
+      --slate-50: #f7fafd; --slate-100: #eef3f9; --slate-200: #dce7f0;
+      --slate-400: #8a9ab0; --slate-600: #4a6278; --slate-800: #1f2d3d; --white: #ffffff;
+    }
+    html.dark-ui {
+      --blue-900: #0a1425;
+      --blue-800: #0f1f38;
+      --blue-700: #1d4ed8;
+      --blue-600: #3b82f6;
+      --green-700: #14532d;
+      --green-600: #166534;
+      --green-500: #22c55e;
+      --green-400: #4ade80;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --slate-50: #0f172a;
+      --slate-100: #111827;
+      --slate-200: #1f2937;
+      --slate-400: #94a3b8;
+      --slate-600: #cbd5e1;
+      --slate-800: #e2e8f0;
+      --white: #0b1220;
+    }
+    body {
+      min-height: 100vh;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 14px; color: var(--slate-800);
+      background: var(--slate-100);
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px; height: 56px;
+      background: var(--blue-900);
+      border-bottom: 3px solid var(--green-500);
+      box-shadow: 0 2px 10px rgba(4,16,30,.3);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .topbar-logo {
+      width: 30px; height: 30px; border-radius: 7px;
+      background: linear-gradient(135deg, var(--blue-600), var(--green-600));
+      display: flex; align-items: center; justify-content: center;
+    }
+    .topbar-divider { width: 1px; height: 20px; background: rgba(255,255,255,.18); }
+    .topbar-kicker { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--green-400); margin-bottom: 2px; line-height: 1; }
+    .topbar-title  { font-size: .95rem; font-weight: 700; color: var(--white); line-height: 1; }
+    .topbar-right  { display: flex; align-items: center; gap: 10px; }
+    .topbar-user   { font-size: .75rem; color: rgba(255,255,255,.5); }
+    .nav-btn {
+      padding: 5px 13px; border-radius: 6px; font-size: .78rem; font-weight: 600;
+      text-decoration: none; letter-spacing: .02em;
+      border: 1.5px solid rgba(255,255,255,.22); color: rgba(255,255,255,.82);
+      transition: background .15s, border-color .15s, color .15s; cursor: pointer;
+      background: transparent;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,.08); border-color: var(--green-500); color: var(--green-400); }
+    .nav-btn.signout { background: var(--green-600); border-color: var(--green-600); color: var(--white); }
+    .nav-btn.signout:hover { background: var(--green-500); border-color: var(--green-500); }
+    .theme-toggle {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1.5px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.9);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .theme-toggle:hover { background: rgba(255,255,255,.12); border-color: var(--green-500); color: var(--green-400); }
+    .theme-toggle .sun { display: none; }
+    html.dark-ui .theme-toggle .sun { display: inline; }
+    html.dark-ui .theme-toggle .moon { display: none; }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(100deg, var(--blue-800) 0%, var(--blue-900) 60%, var(--green-700) 100%);
+      padding: 24px 32px 20px; position: relative; overflow: hidden;
+    }
+    .hero::after {
+      content: ""; position: absolute; inset: 0;
+      background: repeating-linear-gradient(130deg,
+        rgba(255,255,255,.025) 0, rgba(255,255,255,.025) 1px,
+        transparent 1px, transparent 24px);
+      pointer-events: none;
+    }
+    .hero-inner { position: relative; z-index: 1; max-width: 1320px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .hero h1 { font-size: 1.3rem; font-weight: 800; color: var(--white); letter-spacing: -.02em; margin-bottom: 3px; }
+    .hero p  { font-size: .82rem; color: rgba(255,255,255,.55); }
+    .week-nav { display: flex; align-items: center; gap: 8px; }
+    .week-nav a {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; border-radius: 7px;
+      background: rgba(255,255,255,.1); color: var(--white);
+      border: 1px solid rgba(255,255,255,.2); text-decoration: none; font-size: .9rem;
+      transition: background .12s;
+    }
+    .week-nav a:hover { background: rgba(255,255,255,.2); }
+    .week-nav span { font-size: .8rem; color: rgba(255,255,255,.6); }
+
+    /* ── Page ── */
+    .page { max-width: 1320px; margin: 0 auto; padding: 24px 28px 56px; }
+
+    /* ── Stat cards ── */
+    .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+    .stat-card {
+      flex: 1; min-width: 160px;
+      background: var(--white);
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 1px 4px rgba(8,24,40,.06);
+      border-top: 3px solid var(--slate-200);
+    }
+    .stat-card.blue  { border-top-color: var(--blue-600); }
+    .stat-card.green { border-top-color: var(--green-500); }
+    .stat-card.amber { border-top-color: var(--amber); }
+    .stat-card.red   { border-top-color: var(--red); }
+    .stat-label { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--slate-400); margin-bottom: 6px; }
+    .stat-value { font-size: 2rem; font-weight: 800; color: var(--slate-800); line-height: 1; }
+    .stat-sub   { font-size: .72rem; color: var(--slate-400); margin-top: 4px; }
+
+    /* ── Section ── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+    }
+    .section-title {
+      font-size: .88rem; font-weight: 800; color: var(--blue-900);
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .record-count {
+      font-size: .75rem; color: var(--slate-400); background: var(--slate-100);
+      padding: 3px 10px; border-radius: 10px; border: 1px solid var(--slate-200);
+    }
+
+    /* ── Table card ── */
+    .table-card {
+      background: var(--white); border-radius: 14px;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 1px 4px rgba(8,24,40,.07);
+      overflow: hidden; margin-bottom: 28px;
+    }
+    .table-scroll { overflow-x: auto; }
+    table.data {
+      width: 100%; border-collapse: collapse;
+      font-size: .82rem; min-width: 640px;
+    }
+    table.data thead tr { background: var(--blue-900); }
+    table.data th {
+      color: var(--white); font-weight: 700;
+      padding: 11px 14px; text-align: left;
+      letter-spacing: .05em; font-size: .68rem; text-transform: uppercase;
+      white-space: nowrap;
+    }
+    table.data td {
+      padding: 10px 14px; border-bottom: 1px solid var(--slate-100);
+      color: var(--slate-800); vertical-align: middle;
+    }
+    table.data tbody tr:last-child td { border-bottom: none; }
+    table.data tbody tr:nth-child(even) td { background: var(--slate-50); }
+    table.data tbody tr:hover td { background: #e3edf7; transition: background .1s; }
+
+    .td-id   { font-weight: 700; color: var(--blue-700); font-family: "Consolas", monospace; font-size: .79rem; }
+    .td-rate { font-weight: 700; color: var(--green-700); }
+    .td-date { white-space: nowrap; color: var(--slate-600); font-size: .79rem; }
+    .td-vendor { font-weight: 600; }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: 10px;
+      font-size: .67rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .badge .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .badge-submitted { background: #f0fdf6; color: var(--green-700); border: 1px solid #a7f3d0; }
+    .badge-submitted .dot { background: var(--green-500); }
+    .badge-pending   { background: #fffbeb; color: var(--amber);      border: 1px solid #fcd34d; }
+    .badge-pending .dot   { background: var(--amber); animation: pulse 1.4s infinite; }
+    .badge-late      { background: #fef2f2; color: var(--red);        border: 1px solid #fca5a5; }
+    .badge-late .dot      { background: var(--red); }
+    .badge-nochange    { background: #f0f9ff; color: var(--blue-700);   border: 1px solid #bfdbfe; }
+    .badge-notrequired { background: #f5f3ff; color: #6d28d9;          border: 1px solid #ddd6fe; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* Vendor breakdown — richer rows */
+    .vendor-table td.td-timestamp { font-size: .76rem; color: var(--slate-400); white-space: nowrap; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 40px 24px; color: var(--slate-400); }
+    .empty-state p { font-size: .86rem; margin-top: 8px; }
+
+    /* ── Collapsible sections ── */
+    .section-toggle {
+      display: flex; align-items: center; gap: 8px; cursor: pointer;
+      user-select: none;
+    }
+    .section-toggle .chevron {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 5px;
+      background: var(--slate-100); border: 1px solid var(--slate-200);
+      color: var(--blue-700); font-size: .75rem;
+      transition: transform .2s, background .15s;
+      flex-shrink: 0;
+    }
+    .section-toggle.collapsed .chevron { transform: rotate(-90deg); }
+    .section-toggle:hover .chevron { background: var(--slate-200); }
+    .collapsible-body { transition: none; }
+    .collapsible-body.hidden { display: none; }
+
+    /* ── Fixed-height scrollable table ── */
+    .col-filter { width: 100%; box-sizing: border-box; }
+
+    /* ── Combined header + filter (Excel-style) ── */
+    th.cf-th {
+      padding: 5px 6px;
+      vertical-align: bottom;
+      white-space: normal;
+    }
+    th.cf-th .col-filter {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 5px 6px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 3px;
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      font-size: .6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      outline: none;
+      cursor: text;
+      white-space: normal;
+      word-break: break-word;
+    }
+    th.cf-th .col-filter::placeholder {
+      color: rgba(255,255,255,.75);
+      font-weight: 700;
+    }
+    th.cf-th .col-filter:focus {
+      border-color: var(--green-400);
+      background: rgba(255,255,255,.14);
+      color: #fff;
+    }
+    th.cf-th .col-filter:focus::placeholder {
+      color: rgba(255,255,255,.35);
+    }
+
+    /* ── Column filter row ── */
+    .filter-row th { background: var(--blue-800); padding: 6px 8px; }
+    .col-filter {
+      width: 100%; padding: 3px 6px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 4px;
+      background: rgba(255,255,255,.08);
+      color: var(--white); font-size: .68rem;
+      outline: none;
+    }
+    .col-filter::placeholder { color: rgba(255,255,255,.35); }
+    .col-filter:focus { border-color: var(--green-400); background: rgba(255,255,255,.14); }
+    /* ── Inline edit styles ── */
+    .row-delete-btn {
+      width: 32px; height: 32px; border-radius: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; background: #fef2f2; color: var(--red);
+      border: 1px solid #fca5a5; font-size: 1rem; line-height: 1;
+      transition: background .15s, transform .1s;
+    }
+    .row-delete-btn:hover { background: #fee2e2; transform: scale(1.1); }
+
+    /* Delinquent action buttons */
+    .dq-btn {
+      padding: 4px 10px; border-radius: 5px; font-size: .7rem; font-weight: 700;
+      cursor: pointer; border: 1.5px solid; line-height: 1.4; white-space: nowrap;
+      transition: background .15s;
+    }
+    .dq-prev { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .dq-prev:hover { background: #dbeafe; }
+    .dq-excl { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+    .dq-excl:hover { background: #fee2e2; }
+
+    /* Delinquent resolution modal */
+    #dq-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 10000;
+      align-items: center; justify-content: center;
+    }
+    #dq-modal-overlay.open { display: flex; }
+    #dq-modal {
+      background: #fff; border-radius: 12px; padding: 30px 34px;
+      max-width: 480px; width: 92%; box-shadow: 0 8px 40px rgba(0,0,0,.22);
+    }
+    #dq-modal h3 { margin: 0 0 10px; font-size: 1.05rem; color: #0b2a4a; }
+    #dq-modal p  { margin: 0 0 20px; font-size: .85rem; color: #4a6278; line-height: 1.55; }
+    .dq-confirm-row { display: flex; gap: 10px; justify-content: flex-end; }
+    .dq-confirm-btn {
+      padding: 8px 22px; border-radius: 7px; font-size: .82rem;
+      font-weight: 700; cursor: pointer; border: none;
+    }
+    .dq-confirm-btn.primary { background: #1a4a8a; color: #fff; }
+    .dq-confirm-btn.primary:hover { background: #163d75; }
+    .dq-confirm-btn.danger  { background: #b91c1c; color: #fff; }
+    .dq-confirm-btn.danger:hover  { background: #991b1b; }
+    .dq-confirm-btn.cancel  { background: #f1f5f9; color: #4a6278; border: 1px solid #dce7f0; }
+    .dq-confirm-btn.cancel:hover  { background: #e2e8f0; }
+    /* Delete confirmation modal */
+    #delete-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.45); z-index: 9999;
+      align-items: center; justify-content: center;
+    }
+    #delete-modal-overlay.open { display: flex; }
+    #delete-modal {
+      background: #fff; border-radius: 10px; padding: 28px 32px;
+      max-width: 380px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,.22);
+      text-align: center;
+    }
+    #delete-modal h3 { margin: 0 0 8px; font-size: 1.05rem; color: var(--slate-800); }
+    #delete-modal p  { margin: 0 0 22px; font-size: .85rem; color: var(--slate-500); }
+    .del-confirm-btn { padding: 8px 22px; border-radius: 6px; font-size: .82rem; font-weight: 700; cursor: pointer; border: none; }
+    .del-confirm-btn.danger  { background: var(--red); color: #fff; margin-right: 10px; }
+    .del-confirm-btn.danger:hover { background: #b91c1c; }
+    .del-confirm-btn.cancel  { background: #f1f5f9; color: var(--slate-600); border: 1px solid var(--slate-200); }
+    .del-confirm-btn.cancel:hover { background: #e2e8f0; }
+    .inline-input {
+      width: 100%; padding: 3px 5px; border: 1px solid var(--blue-600);
+      border-radius: 3px; font-size: .71rem; font-family: inherit;
+      background: #fff; color: var(--slate-800); box-sizing: border-box;
+    }
+    .edit-error { font-size: .65rem; color: var(--red); display: block; margin-top: 2px; }
+    td.editable-cell { cursor: cell; }
+    td.editable-cell:hover { background: #f0f7ff !important; }
+    tr.row-dirty td { background: #eef5ff !important; }
+    .saving-spinner { font-size: .65rem; color: var(--slate-400); margin-left: 4px; }
+  </style>
+</head>
+<body>
+<script>
+(function(){
+  var root=document.documentElement;
+  if(localStorage.getItem('rdp-theme')==='dark') root.classList.add('dark-ui');
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest('#theme-toggle');
+    if(!btn) return;
+    var dark=root.classList.toggle('dark-ui');
+    localStorage.setItem('rdp-theme',dark?'dark':'light');
+  });
+})();
+</script>
+
+<!-- Topbar -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+        <path d="M3 14l4-5 3 3 3-4 4 6H3z" fill="rgba(255,255,255,.9)"/>
+        <circle cx="15" cy="5" r="2.5" fill="#48c98a"/>
+      </svg>
+    </div>
+    <div class="topbar-divider"></div>
+    <div>
+      <div class="topbar-kicker">Rental Data Pipeline</div>
+      <div class="topbar-title">Weekly Review</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-user">{{ request.user.username }}</span>
+    <a href="/analytics/" class="nav-btn">Analytics</a>
+    <button type="button" id="theme-toggle" class="theme-toggle" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
+      <span class="moon">&#9790;</span><span class="sun">&#9728;</span>
+    </button>
+    <form method="post" action="{% url 'portal_logout' %}" style="margin:0;">
+      {% csrf_token %}
+      <button type="submit" class="nav-btn signout">Sign Out</button>
+    </form>
+  </div>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-inner">
+    <div>
+      <h1>Week {{ current_week }} — Vendor Submission Review</h1>
+      <p>Cycle anchor: {{ cycle_date }} &nbsp;&middot;&nbsp; {{ current_year }}</p>
+    </div>
+    <div class="week-nav">
+      <span>Navigate:</span>
+      <a href="?week={{ current_week|add:"-1" }}&year={{ current_year }}" title="Previous week">&#8592;</a>
+      <a href="{% url 'weekly_review' %}" title="Current week" style="font-size:.7rem;font-weight:700;width:auto;padding:0 10px;">Today</a>
+      {% if not is_current_week %}<a href="?week={{ current_week|add:"1" }}&year={{ current_year }}" title="Next week">&#8594;</a>{% endif %}
+    </div>
+  </div>
+</div>
+
+<main class="page">
+
+  {% if messages %}
+  <div style="margin-bottom:16px;">
+    {% for msg in messages %}
+    <div style="
+      padding:12px 18px;border-radius:8px;font-size:.85rem;font-weight:600;
+      margin-bottom:8px;
+      {% if msg.tags == 'success' %}background:#e6f9f0;color:#1a6e41;border:1px solid #a8e6c5;
+      {% elif msg.tags == 'warning' %}background:#fff8e6;color:#7a5200;border:1px solid #ffd97d;
+      {% else %}background:#fdecea;color:#7a1f1f;border:1px solid #f5c6c6;{% endif %}
+    ">{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="stat-row">
+    <div class="stat-card blue">
+      <div class="stat-label">Total Vendors</div>
+      <div class="stat-value">{{ total_vendors }}</div>
+      <div class="stat-sub">active vendors</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Submitted</div>
+      <div class="stat-value">{{ submitted_count }}</div>
+      <div class="stat-sub">verified this week</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-label">Pending</div>
+      <div class="stat-value">{{ pending_count }}</div>
+      <div class="stat-sub">awaiting submission</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Late</div>
+      <div class="stat-value">{{ late_count }}</div>
+      <div class="stat-sub">past deadline</div>
+    </div>
+    <div class="stat-card" style="background:#f5f3ff;border-left:4px solid #7c3aed;">
+      <div class="stat-label" style="color:#6d28d9;">Not Required</div>
+      <div class="stat-value" style="color:#6d28d9;">{{ not_required_count }}</div>
+      <div class="stat-sub">monthly cadence</div>
+    </div>
+  </div>
+
+  <!-- Vendor response breakdown -->
+  <div class="section-header">
+    <span class="section-toggle" id="toggle-vendors" onclick="toggleSection('vendors')">
+      <span class="chevron" id="chevron-vendors">&#9660;</span>
+      <span class="section-title">Vendor Responses</span>
+    </span>
+    <span class="record-count">{{ total_vendors }} vendor{{ total_vendors|pluralize }}</span>
+  </div>
+  <div class="collapsible-body" id="body-vendors">
+  <div class="table-card">
+    {% if delinquent_vendors %}
+    <div id="dq-banner" style="margin:0 0 14px;padding:10px 16px;border-radius:8px;
+      background:#fff7ed;border:1px solid #fed7aa;font-size:.82rem;color:#9a3412;display:flex;
+      align-items:center;gap:10px;">
+      <span style="font-size:1.1rem;">&#9888;</span>
+      <span id="dq-banner-count">{{ delinquent_vendors|length }} vendor{{ delinquent_vendors|length|pluralize }} need{{ delinquent_vendors|length|pluralize:"s," }} a resolution decision before publishing.
+        &nbsp;&mdash;&nbsp;
+        {% if monthly_required %}
+          <strong>Monthly vendors are required this week</strong> (first full week of {{ cycle_date|date:"F" }}).
+        {% else %}
+          Monthly vendors are <strong>not required</strong> this week — they already submitted earlier in {{ cycle_date|date:"F" }}.
+        {% endif %}
+      </span>
+    </div>
+    {% endif %}
+    <div class="table-scroll">
+      <table class="data vendor-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Vendor</th>
+            <th>Cadence</th>
+            <th>Status</th>
+            <th>Submitted At</th>
+            <th style="white-space:nowrap;">Resolution</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in audit_list %}
+          <tr>
+            <td style="color:var(--slate-400);font-size:.75rem;">{{ forloop.counter }}</td>
+            <td class="td-vendor">{{ item.vendor_name }}</td>
+            <td style="white-space:nowrap;">
+              {% if item.audit %}
+                {% if item.audit.cadence == "monthly" %}
+                  <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:700;letter-spacing:.04em;background:#fef9e7;color:#92400e;border:1px solid #fde68a;">&#9680; Monthly</span>
+                {% else %}
+                  <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:700;letter-spacing:.04em;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">&#9632; Weekly</span>
+                {% endif %}
+              {% else %}
+                <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:700;letter-spacing:.04em;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">&#9632; Weekly</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.audit.verified and item.audit.no_change and item.audit.cadence == "monthly" %}
+                <span class="badge badge-notrequired"><span class="dot"></span>Not Required</span>
+              {% elif item.audit.verified %}
+                <span class="badge badge-submitted"><span class="dot"></span>Submitted</span>
+              {% elif item.audit.is_late %}
+                <span class="badge badge-late"><span class="dot"></span>Late</span>
+              {% else %}
+                <span class="badge badge-pending"><span class="dot"></span>Pending</span>
+              {% endif %}
+            </td>
+            <td class="td-timestamp">
+              {{ item.audit.submitted_at|date:"M d, Y H:i"|default:"—" }}
+            </td>
+            <td style="white-space:nowrap;">
+              {% if not item.audit or not item.audit.verified %}
+              <div style="display:flex;gap:6px;">
+                <button class="dq-btn dq-prev"
+                  onclick="openDelinquentModal('{{ item.vendor_name|escapejs }}','use_previous')"
+                  title="Carry forward this vendor's last published records">
+                  &#8617; Use Previous
+                </button>
+                <button class="dq-btn dq-excl"
+                  onclick="openDelinquentModal('{{ item.vendor_name|escapejs }}','delete')"
+                  title="Exclude this vendor from this week's publish">
+                  &#10005; Exclude
+                </button>
+              </div>
+              {% elif item.audit.no_change %}
+              <span style="font-size:.72rem;color:#0f766e;font-weight:600;">&#10003; Resolved</span>
+              {% else %}
+              <span style="font-size:.72rem;color:var(--slate-400);">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <p>No active vendors found. Add vendors via the admin panel.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  </div><!-- /collapsible-body vendors -->
+
+  <!-- Consolidated staging table -->
+  <div class="section-header">
+    <span class="section-toggle" id="toggle-consolidated" onclick="toggleSection('consolidated')">
+      <span class="chevron" id="chevron-consolidated">&#9660;</span>
+      <span class="section-title">Consolidated Equipment — All Vendors</span>
+    </span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="record-count" id="filtered-count">{{ staging_rows|length }} record{{ staging_rows|length|pluralize }}</span>
+      <button id="csv-download-btn" onclick="downloadTableCSV()" style="
+        padding:5px 14px;border-radius:6px;font-size:.78rem;font-weight:700;cursor:pointer;
+        background:var(--green-600);color:#fff;border:none;letter-spacing:.03em;
+        transition:background .15s;
+      " onmouseover="this.style.background='var(--green-500)'" onmouseout="this.style.background='var(--green-600)')">
+        &#x2193; Download CSV
+      </button>
+      {% if staging_rows %}
+        {% if already_published %}
+        <span style="padding:5px 14px;border-radius:6px;font-size:.78rem;font-weight:700;
+          background:var(--slate-200);color:var(--slate-500);border:1px solid var(--slate-300);
+          cursor:default;">
+          &#x2713; Published
+        </span>
+        <a href="/review/?week={{ next_week }}&year={{ next_year }}" style="
+          padding:5px 14px;border-radius:6px;font-size:.78rem;font-weight:700;cursor:pointer;
+          background:#0f766e;color:#fff;border:none;letter-spacing:.03em;text-decoration:none;
+          transition:background .15s;
+        " onmouseover="this.style.background='#115e59'" onmouseout="this.style.background='#0f766e'">
+          &#x2192; Go to Week {{ next_week }}
+        </a>
+        {% else %}
+        {% if can_publish %}
+        <button onclick="openPublishModal()" style="
+          padding:5px 14px;border-radius:6px;font-size:.78rem;font-weight:700;cursor:pointer;
+          background:#1a4a8a;color:#fff;border:none;letter-spacing:.03em;
+          transition:background .15s;
+        " onmouseover="this.style.background='#163d75'" onmouseout="this.style.background='#1a4a8a'">
+          &#x2191; Publish to Master
+        </button>
+        {% else %}
+        <button onclick="openPublishModal()" style="
+          padding:5px 14px;border-radius:6px;font-size:.78rem;font-weight:700;cursor:pointer;
+          background:#92400e;color:#fff;border:none;letter-spacing:.03em;
+          transition:background .15s;
+        " onmouseover="this.style.background='#78350f'" onmouseout="this.style.background='#92400e'"
+          title="{{ publish_blocker_count }} vendor response{{ publish_blocker_count|pluralize }} still pending — published data will only include submitted records">
+          &#x2191; Publish ({{ publish_blocker_count }} pending)
+        </button>
+        {% endif %}
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+  <div class="collapsible-body" id="body-consolidated">
+  <div class="table-card" style="overflow:hidden;">
+    <div style="overflow:auto;max-height:540px;">
+      <table style="width:100%;border-collapse:collapse;font-size:.71rem;table-layout:fixed;" id="consolidated-table">
+        <colgroup>
+          <col style="width:4.5%;">
+          <col style="width:4%;">
+          <col style="width:6%;">
+          <col style="width:11%;">
+          <col style="width:8%;">
+          <col style="width:8%;">
+          <col style="width:11%;">
+          <col style="width:6%;">
+          <col style="width:6%;">
+          <col style="width:5%;">
+          <col style="width:5%;">
+          <col style="width:6%;">
+          <col style="width:9%;">
+          <col style="width:5%;"><!-- Actions -->
+        </colgroup>
+        <thead style="position:sticky;top:0;z-index:10;">
+          <tr style="background:var(--blue-900);">
+            <th class="cf-th"><input class="col-filter" data-col="0" placeholder="YEAR"></th>
+            <th class="cf-th"><input class="col-filter" data-col="1" placeholder="WK #"></th>
+            <th class="cf-th"><input class="col-filter" data-col="2" placeholder="DATE"></th>
+            <th class="cf-th"><input class="col-filter" data-col="3" placeholder="RENTAL CO."></th>
+            <th class="cf-th"><input class="col-filter" data-col="4" placeholder="TYPE OF EQUIP."></th>
+            <th class="cf-th"><input class="col-filter" data-col="5" placeholder="EQUIPMENT #"></th>
+            <th class="cf-th"><input class="col-filter" data-col="6" placeholder="DESCRIPTION"></th>
+            <th class="cf-th"><input class="col-filter" data-col="7" placeholder="RENT START"></th>
+            <th class="cf-th"><input class="col-filter" data-col="8" placeholder="PROJ. END"></th>
+            <th class="cf-th"><input class="col-filter" data-col="9" placeholder="PO #"></th>
+            <th class="cf-th"><input class="col-filter" data-col="10" placeholder="SN REQ #"></th>
+            <th class="cf-th"><input class="col-filter" data-col="11" placeholder="MO. RATE $"></th>
+            <th class="cf-th"><input class="col-filter" data-col="12" placeholder="COMMENTS"></th>
+            <th style="padding:5px 4px;color:rgba(255,255,255,.5);font-size:.6rem;font-weight:700;text-transform:uppercase;vertical-align:middle;white-space:nowrap;">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="consolidated-tbody">
+        {% for row in staging_rows %}
+        <tr data-pk="{{ row.pk }}"
+            data-vendor-name="{{ row.vendor_name }}"
+            data-vendor-code="{{ row.vendor_code|default:'' }}"
+            data-equipment-id="{{ row.equipment_id }}"
+            data-equipment-description="{{ row.equipment_description }}"
+            data-equipment-category="{{ row.equipment_category|default:'' }}"
+            data-quantity="{{ row.quantity }}"
+            data-rate-daily="{{ row.rate_daily }}"
+            data-on-rent-start="{{ row.on_rent_start|date:'Y-m-d'|default:'' }}"
+            data-on-rent-end="{{ row.on_rent_end|date:'Y-m-d'|default:'' }}"
+            data-po-number="{{ row.po_number|default:'' }}"
+            data-sn-request-number="{{ row.sn_request_number|default:'' }}"
+            data-comments="{{ row.comments|default:'' }}">
+          <td style="padding:7px 6px;border-bottom:1px solid var(--slate-100);text-align:center;">{{ current_year }}</td>
+          <td style="padding:7px 6px;border-bottom:1px solid var(--slate-100);text-align:center;">{{ current_week }}</td>
+          <td style="padding:7px 6px;border-bottom:1px solid var(--slate-100);color:var(--slate-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ cycle_date|date:"m/d/Y" }}</td>
+          <td class="d-vendor editable-cell" ondblclick="editCell(this,'vendor_name','select')" title="Double-click to edit" style="padding:7px 6px;border-bottom:1px solid var(--slate-100);font-weight:600;">{{ row.vendor_name }}</td>
+          <td class="d-cat editable-cell" ondblclick="editCell(this,'equipment_category','select')" title="Double-click to edit" style="padding:7px 6px;border-bottom:1px solid var(--slate-100);font-size:.72rem;color:var(--slate-600);cursor:pointer;">{{ row.equipment_category|default:"—" }}</td>
+          <td class="d-eqid editable-cell" ondblclick="editCell(this,'equipment_id','text')" title="Double-click to edit" style="padding:7px 6px;border-bottom:1px solid var(--slate-100);font-weight:700;color:var(--blue-700);font-family:Consolas,monospace;font-size:.69rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ row.equipment_id }}</td>
+          <td class="d-desc editable-cell" ondblclick="editCell(this,'equipment_description','text')" title="Double-click to edit" style="padding:7px 6px;border-bottom:1px solid var(--slate-100);">{{ row.equipment_description }}</td>
+          <td class="d-start editable-cell" ondblclick="editCell(this,'on_rent_start','date')" title="Double-click to edit" style="padding:7px 6px;border-bottom:1px solid var(--slate-100);color:var(--slate-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ row.on_rent_start|date:"m/d/Y" }}</td>
+          <td class="d-end editable-cell" ondblclick="editCell(this,'on_rent_end','date')" title="Double-click to edit" style="padding:7px 6px;border-bottom:1px solid var(--slate-100);color:var(--slate-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ row.on_rent_end|date:"m/d/Y"|default:"—" }}</td>
+          <td class="d-po editable-cell" ondblclick="editCell(this,'po_number','text')" title="Double-click to edit" style="padding:7px 6px;border-bottom:1px solid var(--slate-100);">{{ row.po_number|default:"—" }}</td>
+          <td class="d-sn editable-cell" ondblclick="editCell(this,'sn_request_number','text')" title="Double-click to edit" style="padding:7px 6px;border-bottom:1px solid var(--slate-100);">{{ row.sn_request_number|default:"—" }}</td>
+          <td class="d-rate editable-cell" ondblclick="editCell(this,'rate_daily','text')" title="Double-click to edit" style="padding:7px 6px;border-bottom:1px solid var(--slate-100);font-weight:700;color:var(--green-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${{ row.rate_daily }}</td>
+          <td class="d-comments editable-cell" ondblclick="editCell(this,'comments','text')" title="Double-click to edit" style="padding:7px 6px;border-bottom:1px solid var(--slate-100);color:var(--slate-500);font-style:italic;">{{ row.comments|default:"—" }}</td>
+          <td style="padding:7px 4px;border-bottom:1px solid var(--slate-100);text-align:center;">
+            <button class="row-delete-btn" onclick="openDeleteModal(this)" title="Delete record">&#128465;</button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="14" style="padding:40px 24px;text-align:center;color:var(--slate-400);">
+            No staging records found for vendors enrolled in Week {{ current_week }}.
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  </div><!-- /collapsible-body consolidated -->
+
+</main>
+
+<script>
+// ── Collapsible sections ──────────────────────────────────────
+function toggleSection(id) {
+  const body    = document.getElementById('body-' + id);
+  const toggle  = document.getElementById('toggle-' + id);
+  const chevron = document.getElementById('chevron-' + id);
+  const hidden  = body.classList.toggle('hidden');
+  toggle.classList.toggle('collapsed', hidden);
+}
+
+// ── Column filters (data-attribute array filter — no DOM layout reflow) ──────
+document.addEventListener('DOMContentLoaded', function () {
+  const tbody   = document.getElementById('consolidated-tbody');
+  const filters = document.querySelectorAll('.col-filter');
+  const counter = document.getElementById('filtered-count');
+
+  // Map column index → row dataset key (camelCase).
+  // Indices match visible column order: 0=year,1=week,2=date are static so null.
+  const COL_ATTRS = [
+    null,                    // 0 year  — static
+    null,                    // 1 week  — static
+    null,                    // 2 date  — static
+    'vendorName',            // 3
+    'equipmentCategory',     // 4
+    'equipmentId',           // 5
+    'equipmentDescription',  // 6
+    'onRentStart',           // 7
+    'onRentEnd',             // 8
+    'poNumber',              // 9
+    'snRequestNumber',       // 10
+    'rateDaily',             // 11
+    'comments',              // 12
+  ];
+
+  // Cache data rows once — avoids repeated DOM queries on each keystroke
+  const allRows = Array.from(tbody.querySelectorAll('tr[data-pk]'));
+
+  function applyFilters() {
+    const activeFilters = Array.from(filters)
+      .map(f => ({ col: parseInt(f.dataset.col, 10), val: f.value.trim().toLowerCase() }))
+      .filter(f => f.val !== '');
+
+    let visible = 0;
+    allRows.forEach(function(row) {
+      const show = activeFilters.every(function({ col, val }) {
+        const attr = COL_ATTRS[col];
+        if (!attr) return true;
+        return (row.dataset[attr] || '').toLowerCase().includes(val);
+      });
+      row.hidden = !show;
+      if (show) visible++;
+    });
+    counter.textContent = visible + ' record' + (visible !== 1 ? 's' : '');
+  }
+
+  filters.forEach(function(f) { f.addEventListener('input', applyFilters); });
+});
+
+// ── CSV download ──────────────────────────────────────────────
+function csvEscape(text) {
+  if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+  return text;
+}
+
+function downloadTableCSV() {
+  const table     = document.getElementById('consolidated-table');
+  const headerRow = table.querySelector('thead tr:first-child');
+  const headers   = Array.from(headerRow.querySelectorAll('th')).map(th => csvEscape(th.innerText.trim()));
+
+  const tbody = document.getElementById('consolidated-tbody');
+  const rows  = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.hidden);
+  const lines = [headers.join(',')];
+  rows.forEach(row => {
+    const cells = Array.from(row.querySelectorAll('td')).map(td => csvEscape(td.innerText.trim().replace(/\s+/g, ' ')));
+    lines.push(cells.join(','));
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'Rental_Report_Week{{ current_week }}_{{ current_year }}.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+
+<!-- Publish confirmation modal -->
+<div id="publish-modal" style="display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:32px 36px;max-width:660px;width:94%;
+    box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:88vh;overflow-y:auto;">
+    <h2 style="margin:0 0 8px;font-size:1.1rem;color:var(--blue-900);">Publish Week {{ current_week }} to Master?</h2>
+    <p style="color:var(--slate-600);font-size:.88rem;margin:0 0 16px;line-height:1.5;">
+      This will move all <strong>{{ staging_rows|length }} submitted records</strong> for
+      Week {{ current_week }}, {{ current_year }} into the Master ledger.
+      This action cannot be undone.
+    </p>
+
+    <!-- Staging validation errors (populated by JS) -->
+    <div id="publish-val-errors" style="display:none;margin-bottom:18px;background:#fef2f2;
+      border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;">
+      <div style="font-weight:700;color:#b91c1c;margin-bottom:8px;font-size:.88rem;">&#9888; Staging data has integrity errors &mdash; fix them before publishing:</div>
+      <div id="publish-val-errors-body" style="max-height:220px;overflow-y:auto;font-size:.78rem;"></div>
+    </div>
+
+    <!-- Change diff section (populated by JS) -->
+    <div id="publish-change-diff" style="display:none;margin-bottom:18px;">
+      <div id="publish-change-diff-body"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closePublishModal()" style="
+        padding:8px 20px;border-radius:6px;font-size:.85rem;font-weight:600;cursor:pointer;
+        background:#fff;color:var(--slate-600);border:1px solid var(--slate-300);">
+        Cancel
+      </button>
+      <form method="post" action="{% url 'publish_week' %}" style="margin:0;">
+        {% csrf_token %}
+        <input type="hidden" name="week" value="{{ current_week }}">
+        <input type="hidden" name="year" value="{{ current_year }}">
+        <button id="publish-confirm-btn" type="submit" style="
+          padding:8px 20px;border-radius:6px;font-size:.85rem;font-weight:700;cursor:pointer;
+          background:#1a4a8a;color:#fff;border:none;">
+          &#x2191; Confirm &amp; Publish
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Delinquent vendor resolution ─────────────────────────────
+const CSRF_DQ    = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+const WEEK_DQ    = {{ current_week }};
+const YEAR_DQ    = {{ current_year }};
+let   DQ_UNRESOLVED = {{ delinquent_vendors_json|safe }}.slice();
+
+let _dqVendor = null;
+let _dqAction = null;
+let _publishAfterDQ = false;
+
+function openDelinquentModal(vendor, action) {
+  _dqVendor = vendor;
+  _dqAction = action;
+  const title   = document.getElementById('dq-modal-title');
+  const desc    = document.getElementById('dq-modal-desc');
+  const primBtn = document.getElementById('dq-confirm-primary');
+  const errEl   = document.getElementById('dq-modal-error');
+  errEl.textContent = '';
+  primBtn.disabled  = false;
+  if (action === 'use_previous') {
+    title.textContent = `Carry Forward Previous Data \u2014 ${vendor}`;
+    desc.innerHTML = `The most recent published records for <strong>${vendor}</strong> will be `
+      + `copied into this week's staging table and marked as submitted on their behalf.<br><br>`
+      + `If this vendor has <em>no prior published data</em>, no records will be added and `
+      + `they will be marked as resolved with no contribution.`;
+    primBtn.textContent = '\u21b6 Use Previous Week Data';
+    primBtn.className   = 'dq-confirm-btn primary';
+  } else {
+    title.textContent = `Exclude Vendor \u2014 ${vendor}`;
+    desc.innerHTML = `All staging data for <strong>${vendor}</strong> will be removed. `
+      + `They will contribute <strong>no records</strong> to this week\u2019s Master ledger.<br><br>`
+      + `This marks them as resolved for Week ${WEEK_DQ} so publishing can proceed.`;
+    primBtn.textContent = '\u2715 Confirm Exclusion';
+    primBtn.className   = 'dq-confirm-btn danger';
+  }
+  document.getElementById('dq-modal-overlay').style.display = 'flex';
+}
+
+function closeDelinquentModal() {
+  document.getElementById('dq-modal-overlay').style.display = 'none';
+  _dqVendor = null;
+  _dqAction = null;
+}
+
+async function confirmDelinquent() {
+  if (!_dqVendor || !_dqAction) return;
+  const btn   = document.getElementById('dq-confirm-primary');
+  const errEl = document.getElementById('dq-modal-error');
+  btn.disabled    = true;
+  btn.textContent = 'Processing\u2026';
+  errEl.textContent = '';
+  try {
+    const body = new URLSearchParams({
+      csrfmiddlewaretoken: CSRF_DQ,
+      vendor_name: _dqVendor,
+      action:      _dqAction,
+      week:        WEEK_DQ,
+      year:        YEAR_DQ,
+    });
+    const resp = await fetch('/review/handle-delinquent/', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': CSRF_DQ },
+      body:    body.toString(),
+    });
+    const data = await resp.json();
+    if (!data.ok) {
+      errEl.textContent = data.error || 'An error occurred.';
+      btn.disabled    = false;
+      btn.textContent = 'Retry';
+      return;
+    }
+    /* Update vendor row in table */
+    document.querySelectorAll('.vendor-table tbody tr').forEach(tr => {
+      const nameCell = tr.querySelector('.td-vendor');
+      if (!nameCell || nameCell.textContent.trim() !== _dqVendor) return;
+      const badgeCell = tr.cells[3];
+      if (badgeCell) {
+        const label = data.action === 'use_previous' ? '\u21b6 Previous Data Used' : '\u2715 Excluded';
+        badgeCell.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;
+          padding:3px 9px;border-radius:10px;font-size:.67rem;font-weight:700;
+          background:#f0fdf6;color:#166534;border:1px solid #a7f3d0;">${label}</span>`;
+      }
+      const resCell = tr.cells[5];
+      if (resCell) resCell.innerHTML = '<span style="font-size:.72rem;color:#0f766e;font-weight:600;">&#10003; Resolved</span>';
+    });
+    DQ_UNRESOLVED = DQ_UNRESOLVED.filter(v => v !== _dqVendor);
+    closeDelinquentModal();
+    /* Update the delinquent banner */
+    const banner = document.getElementById('dq-banner-count');
+    if (banner && DQ_UNRESOLVED.length > 0) {
+      const n = DQ_UNRESOLVED.length;
+      banner.textContent = `${n} vendor${n !== 1 ? 's' : ''} still need${n === 1 ? 's' : ''} a resolution before publishing.`;
+    }
+    if (_publishAfterDQ) {
+      if (DQ_UNRESOLVED.length > 0) {
+        /* more vendors still need resolution — prompt next one */
+        openDelinquentModal(DQ_UNRESOLVED[0], 'use_previous');
+      } else {
+        /* all resolved — now open the publish validation modal */
+        openPublishModal();
+      }
+    } else if (DQ_UNRESOLVED.length === 0) {
+      window.location.reload();
+    }
+  } catch (_) {
+    errEl.textContent = 'Network error \u2014 please try again.';
+    btn.disabled    = false;
+    btn.textContent = 'Retry';
+  }
+}
+
+async function openPublishModal() {
+  /* If there are still unresolved delinquent vendors, prompt for them first */
+  if (DQ_UNRESOLVED.length > 0) {
+    _publishAfterDQ = true;
+    openDelinquentModal(DQ_UNRESOLVED[0], 'use_previous');
+    return;
+  }
+  _publishAfterDQ = false;
+
+  const modal      = document.getElementById('publish-modal');
+  const diffWrap   = document.getElementById('publish-change-diff');
+  const diffBody   = document.getElementById('publish-change-diff-body');
+  const confirmBtn = document.getElementById('publish-confirm-btn');
+  const valWrap    = document.getElementById('publish-val-errors');
+  const valBody    = document.getElementById('publish-val-errors-body');
+
+  diffWrap.style.display  = 'none';
+  valWrap.style.display   = 'none';
+  diffBody.innerHTML      = '';
+  valBody.innerHTML       = '';
+  confirmBtn.textContent  = '\u2191 Confirm & Publish';
+  confirmBtn.style.background = '#1a4a8a';
+  modal.style.display = 'flex';
+
+  /* Step 1: staging integrity validation */
+  confirmBtn.textContent = 'Validating data\u2026';
+  confirmBtn.disabled    = true;
+  let validationPassed   = true;
+  try {
+    const vResp = await fetch(`/review/validate/?week=${WEEK_DQ}&year=${YEAR_DQ}`);
+    const vData = await vResp.json();
+    if (!vData.ok && vData.row_errors && vData.row_errors.length > 0) {
+      validationPassed = false;
+      valBody.innerHTML = vData.row_errors.map(re =>
+        `<div style="margin-bottom:8px;">
+           <span style="font-weight:700;">${re.vendor} \u2014 ${re.equipment_id} (row ${re.row}):</span>
+           <ul style="margin:4px 0 0 16px;">${re.errors.map(e => `<li>${e}</li>`).join('')}</ul>
+         </div>`
+      ).join('');
+      valWrap.style.display = 'block';
+    }
+  } catch (_) { /* allow publish if validation endpoint itself fails */ }
+
+  if (!validationPassed) {
+    confirmBtn.disabled    = true;
+    confirmBtn.style.background = '#94a3b8';
+    confirmBtn.style.cursor     = 'not-allowed';
+    confirmBtn.title            = 'Fix integrity errors before publishing';
+    confirmBtn.textContent = '\u2191 Confirm & Publish';
+    return;
+  }
+
+  /* Step 2: change diff vs prior cycle */
+  confirmBtn.textContent = 'Checking changes\u2026';
+  try {
+    const resp = await fetch(`/review/change-check/?week=${WEEK_DQ}&year=${YEAR_DQ}`);
+    const data = await resp.json();
+    if (data.ok && data.changes && data.changes.length > 0) {
+      const byKey = {};
+      data.changes.forEach(c => {
+        const key = `${c.vendor} \u2014 ${c.equipment_id}`;
+        if (!byKey[key]) byKey[key] = [];
+        byKey[key].push(c);
+      });
+      const n = data.changes.length;
+      diffBody.innerHTML =
+        `<div style="font-weight:600;color:#b45309;margin-bottom:10px;font-size:.88rem;">
+           &#9888; ${n} field change${n !== 1 ? 's' : ''} detected vs the prior published cycle:
+         </div>` +
+        Object.entries(byKey).map(([key, rows]) =>
+          `<div style="margin-bottom:12px;">
+             <div style="font-weight:600;font-size:.82rem;margin-bottom:4px;color:#1e3a5f;">${key}</div>
+             <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+               <thead><tr style="background:#fef3c7;">
+                 <th style="text-align:left;padding:4px 8px;border:1px solid #fde68a;">Field</th>
+                 <th style="text-align:left;padding:4px 8px;border:1px solid #fde68a;">Previous</th>
+                 <th style="text-align:left;padding:4px 8px;border:1px solid #fde68a;">Current</th>
+               </tr></thead><tbody>${rows.map(r =>
+                 `<tr>
+                   <td style="padding:4px 8px;border:1px solid #fde68a;">${r.field}</td>
+                   <td style="padding:4px 8px;border:1px solid #fde68a;color:#dc2626;">${r.old || '\u2014'}</td>
+                   <td style="padding:4px 8px;border:1px solid #fde68a;color:#16a34a;">${r.new || '\u2014'}</td>
+                 </tr>`).join('')}</tbody></table>
+           </div>`
+        ).join('');
+      diffWrap.style.display = 'block';
+    }
+  } catch (_) { /* proceed */ }
+
+  confirmBtn.disabled    = false;
+  confirmBtn.textContent = '\u2191 Confirm & Publish';
+}
+function closePublishModal() { document.getElementById('publish-modal').style.display = 'none'; }
+document.getElementById('publish-modal').addEventListener('click', function(e) {
+  if (e.target === this) closePublishModal();
+});
+</script>
+
+<!-- Delinquent vendor resolution modal -->
+<div id="dq-modal-overlay" onclick="if(event.target===this)closeDelinquentModal()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;
+  align-items:center;justify-content:center;">
+  <div id="dq-modal" style="background:#fff;border-radius:12px;padding:30px 34px;
+    max-width:480px;width:92%;box-shadow:0 8px 40px rgba(0,0,0,.22);">
+    <h3 id="dq-modal-title" style="margin:0 0 10px;font-size:1.05rem;color:#0b2a4a;"></h3>
+    <p  id="dq-modal-desc"  style="margin:0 0 20px;font-size:.85rem;color:#4a6278;line-height:1.55;"></p>
+    <div id="dq-modal-error" style="color:#b91c1c;font-size:.8rem;margin-bottom:10px;min-height:1em;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closeDelinquentModal()" style="
+        padding:8px 18px;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;
+        background:#f1f5f9;color:#4a6278;border:1px solid #dce7f0;">Cancel</button>
+      <button id="dq-confirm-primary" onclick="confirmDelinquent()" style="
+        padding:8px 22px;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;
+        border:none;"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Reviewer inline edit (double-click cells) ────────────────
+const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+// Raw-value attr names keyed by field name
+const RAW_ATTR = {
+  vendor_name:           'vendorName',
+  vendor_code:           'vendorCode',
+  equipment_id:          'equipmentId',
+  equipment_description: 'equipmentDescription',
+  equipment_category:    'equipmentCategory',
+  rate_daily:            'rateDaily',
+  on_rent_start:         'onRentStart',
+  on_rent_end:           'onRentEnd',
+  po_number:             'poNumber',
+  sn_request_number:     'snRequestNumber',
+  comments:              'comments',
+};
+const REVIEW_CATEGORIES = {{ equipment_categories_json|safe }};
+const REVIEW_VENDORS    = {{ vendor_names_json|safe }};
+
+function editCell(td, field, type) {
+  // Don't open a second input/select if this cell is already active
+  if (td.querySelector('input,select')) return;
+
+  const tr    = td.closest('tr');
+  const rawVal = tr.dataset[RAW_ATTR[field]] || '';
+
+  // Snapshot display HTML so we can revert on Escape
+  td.dataset.displayHtml = td.innerHTML;
+  td.dataset.fieldName   = field;
+  tr.classList.add('row-dirty');
+
+  let input;
+  if (type === 'select') {
+    input = document.createElement('select');
+    input.className = 'inline-input';
+    input.name      = field;
+    input.style.fontSize = '.8rem';
+    input.style.padding  = '2px 4px';
+    const blank = document.createElement('option');
+    blank.value = ''; blank.textContent = '\u2014 select \u2014';
+    input.appendChild(blank);
+    const optList = field === 'vendor_name' ? REVIEW_VENDORS : REVIEW_CATEGORIES;
+    optList.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat; opt.textContent = cat;
+      if (cat === rawVal) opt.selected = true;
+      input.appendChild(opt);
+    });
+  } else {
+    input = document.createElement('input');
+    input.className = 'inline-input';
+    input.type      = type;
+    input.name      = field;
+    input.value     = rawVal;
+  }
+  td.innerHTML    = '';
+  td.appendChild(input);
+  input.focus();
+  if (type === 'text') input.select();
+
+  let saved = false;
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); saved = true; commitCell(td, tr); }
+    if (e.key === 'Escape') { e.preventDefault(); saved = true; revertCell(td, tr); }
+    if (e.key === 'Tab')   { e.preventDefault(); saved = true; commitCell(td, tr); }
+  });
+
+  input.addEventListener('blur', () => {
+    if (!saved) { saved = true; commitCell(td, tr); }
+  });
+}
+
+function revertCell(td, tr) {
+  td.innerHTML = td.dataset.displayHtml;
+  // Only remove dirty class if no other cells are open
+  if (!tr.querySelector('.inline-input')) tr.classList.remove('row-dirty');
+}
+
+function commitCell(td, tr) {
+  const input = td.querySelector('input,select');
+  if (!input) return;
+
+  const field = input.name;
+  const val   = input.value.trim();
+
+  // Update the row's data attribute immediately so subsequent saves see it
+  tr.dataset[RAW_ATTR[field]] = val;
+
+  // Build payload from all current data attrs (not just the one being edited)
+  const pk   = tr.dataset.pk;
+  const body = new FormData();
+  body.append('csrfmiddlewaretoken', CSRF);
+  Object.entries(RAW_ATTR).forEach(([f, attr]) => body.append(f, tr.dataset[attr] || ''));
+  // Also pass quantity (read-only but required by endpoint)
+  body.append('quantity', tr.dataset.quantity || '1');
+
+  // Show a subtle saving indicator
+  td.innerHTML = `<span style="color:var(--slate-400);font-size:.7rem;">${val || '—'} <em class="saving-spinner">saving…</em></span>`;
+
+  fetch(`/review/inline-save/${pk}/`, { method: 'POST', body })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) {
+        const msg = (data.errors || {})[field] || Object.values(data.errors || {})[0] || 'Error saving.';
+        // Restore input with error shown
+        td.innerHTML = '';
+        const inp2 = document.createElement('input');
+        inp2.className = 'inline-input';
+        inp2.style.borderColor = 'var(--red)';
+        inp2.type  = input.type;
+        inp2.name  = field;
+        inp2.value = val;
+        const err  = document.createElement('span');
+        err.className = 'edit-error';
+        err.textContent = msg;
+        td.appendChild(inp2);
+        td.appendChild(err);
+        inp2.focus();
+        // Revert data attr to last known good
+        tr.dataset[RAW_ATTR[field]] = td.dataset.displayHtml ? '' : val;
+        return;
+      }
+
+      // Sync all data attrs with server response
+      tr.dataset.vendorName           = data.vendor_name;
+      tr.dataset.vendorCode           = data.vendor_code;
+      tr.dataset.equipmentId          = data.equipment_id;
+      tr.dataset.equipmentDescription = data.equipment_description;
+      tr.dataset.equipmentCategory    = data.equipment_category || '';
+      tr.dataset.rateDaily            = data.rate_daily;
+      tr.dataset.onRentStart          = data.on_rent_start;
+      tr.dataset.onRentEnd            = data.on_rent_end;
+      tr.dataset.poNumber             = data.po_number;
+      tr.dataset.snRequestNumber      = data.sn_request_number;
+      tr.dataset.comments             = data.comments;
+
+      const fmt = iso => {
+        if (!iso) return '—';
+        const [y, m, d] = iso.split('-');
+        return `${m}/${d}/${y}`;
+      };
+
+      // Restore all cells (in case multiple were edited before blur)
+      tr.classList.remove('row-dirty');
+      const cellMap = {
+        'd-vendor': () => data.vendor_name || '—',
+        'd-vcode':  () => data.vendor_code  || '—',
+        'd-eqid':   () => data.equipment_id,
+        'd-desc':   () => data.equipment_description,
+        'd-cat':    () => data.equipment_category || '—',
+        'd-rate':   () => `$${parseFloat(data.rate_daily).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`,
+        'd-start':  () => fmt(data.on_rent_start),
+        'd-end':    () => fmt(data.on_rent_end),
+        'd-po':     () => data.po_number    || '—',
+        'd-sn':     () => data.sn_request_number || '—',
+        'd-comments': () => data.comments || '—',
+      };
+      Object.entries(cellMap).forEach(([cls, valFn]) => {
+        const c = tr.querySelector('.' + cls);
+        if (c && !c.querySelector('input,select')) c.textContent = valFn();
+      });
+      // Only restore the cell we just saved (others may still be in edit mode)
+      const savedClass = Object.entries(cellMap).find(([cls]) => tr.querySelector('.' + cls)?.dataset?.fieldName === field)?.[0];
+      // Restore just the td we worked on (it may already be plain text from above)
+      restoreCell(td, field, data);
+    })
+    .catch(() => {
+      td.innerHTML = td.dataset.displayHtml;
+      alert('Network error — change not saved.');
+    });
+}
+
+function restoreCell(td, field, data) {
+  const fmt = iso => { if (!iso) return '—'; const [y,m,d]=iso.split('-'); return `${m}/${d}/${y}`; };
+  const display = {
+    vendor_name:           data.vendor_name || '—',
+    vendor_code:           data.vendor_code  || '—',
+    equipment_id:          data.equipment_id,
+    equipment_description: data.equipment_description,
+    equipment_category:    data.equipment_category || '—',
+    rate_daily:            `$${parseFloat(data.rate_daily).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`,
+    on_rent_start:         fmt(data.on_rent_start),
+    on_rent_end:           fmt(data.on_rent_end),
+    po_number:             data.po_number    || '—',
+    sn_request_number:     data.sn_request_number || '—',
+    comments:              data.comments || '—',
+  };
+  td.textContent = display[field] ?? '—';
+}
+
+function openDeleteModal(btn) {
+  _pendingDeleteBtn = btn;
+  const tr = btn.closest('tr');
+  const vendor = tr.dataset.vendorName || '';
+  const eqid   = tr.dataset.equipmentId || '';
+  document.getElementById('delete-modal-detail').textContent =
+    vendor && eqid ? `${vendor} — ${eqid}` : 'this record';
+  document.getElementById('delete-modal-overlay').classList.add('open');
+}
+
+function closeDeleteModal() {
+  _pendingDeleteBtn = null;
+  document.getElementById('delete-modal-overlay').classList.remove('open');
+}
+
+let _pendingDeleteBtn = null;
+
+function confirmDelete() {
+  const btn = _pendingDeleteBtn;
+  closeDeleteModal();
+  if (!btn) return;
+
+  const tr   = btn.closest('tr');
+  const pk   = tr.dataset.pk;
+  const body = new FormData();
+  body.append('csrfmiddlewaretoken', CSRF);
+
+  fetch(`/review/delete/${pk}/`, { method: 'POST', body })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        tr.remove();
+        const counter = document.getElementById('filtered-count');
+        if (counter) {
+          const n = parseInt(counter.textContent) - 1;
+          counter.textContent = n + ' record' + (n !== 1 ? 's' : '');
+        }
+      } else {
+        alert('Could not delete: ' + JSON.stringify(data.errors));
+      }
+    })
+    .catch(() => alert('Network error. Please try again.'));
+}
+
+// Close modal on overlay click
+document.getElementById('delete-modal-overlay')
+  .addEventListener('click', e => { if (e.target.id === 'delete-modal-overlay') closeDeleteModal(); });
+
+// dark mode wired in early <script> at top of <body>
+</script>
+
+<!-- Delete confirmation modal -->
+<div id="delete-modal-overlay">
+  <div id="delete-modal">
+    <h3>Delete Record?</h3>
+    <p>This will permanently remove <strong id="delete-modal-detail"></strong> from the staging table. This cannot be undone.</p>
+    <button class="del-confirm-btn danger" onclick="confirmDelete()">&#128465; Delete</button>
+    <button class="del-confirm-btn cancel" onclick="closeDeleteModal()">Cancel</button>
+  </div>
+</div>
+</body>
+</html>
