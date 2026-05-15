@@ -12,12 +12,12 @@ This portfolio is the final record of my MS-CISBA journey, demonstrating mastery
 
 | Folder | Curricular Area | Description |
 |---|---|---|
-| [`BA/`](BA/) | Business Analytics | Self-assessment, coursework artifacts, and professional BI work demonstrating data visualization, dashboard design, and KPI storytelling. |
-| [`DM/`](DM/) | Data Management | Self-assessment, SQL and R artifacts, and schema design work demonstrating relational database fluency and ETL pipeline construction. |
-| [`SS/`](SS/) | Software Systems | Self-assessment, Python/Django artifacts, and professional software development work demonstrating full-stack application development. |
-| [`CN/`](CN/) | Cybersecurity & Networking | Self-assessment, network topology and forensics artifacts, and security implementation evidence. |
+| [`BA/`](./Synthesis_Prototype_Project_Demo/rental_data_pipeline/docs/assignments/Assignment_1_Business_Analytics.md) | Business Analytics | Self-assessment, coursework artifacts, and professional BI work demonstrating data visualization, dashboard design, and KPI storytelling. |
+| [`DM/`](./Synthesis_Prototype_Project_Demo/rental_data_pipeline/docs/assignments/Assignment_2_Data_Management.md) | Data Management | Self-assessment, SQL and R artifacts, and schema design work demonstrating relational database fluency and ETL pipeline construction. |
+| [`SS/`](./Synthesis_Prototype_Project_Demo/rental_data_pipeline/docs/assignments/Assignment_3_Software_Systems.md) | Software Systems | Self-assessment, Python/Django artifacts, and professional software development work demonstrating full-stack application development. |
+| [`CN/`](./Synthesis_Prototype_Project_Demo/rental_data_pipeline/docs/assignments/Assignment_4_Networking_Cybersecurity.md) | Cybersecurity & Networking | Self-assessment, network topology and forensics artifacts, and security implementation evidence. |
 | [`Synthesis_Prototype_Project_Demo/`](Synthesis_Prototype_Project_Demo/) | Synthesis Prototype | The **Rental Data Pipeline** — a Django web application that integrates all four pillars into a single, functioning artifact. |
-| [`deliverables/`](deliverables/) | Final Deliverables | Synthesis paper, presentation slides, and video presentation. |
+| [`deliverables/`](./Synthesis_Prototype_Project_Demo/rental_data_pipeline/docs/deliverables/) | Final Deliverables | Synthesis paper, presentation slides, and video presentation. |
 | [`docs/`](./Synthesis_Prototype_Project_Demo/rental_data_pipeline/docs/) | Project Documentation | ADRs, PRDs, implementation plan, and supporting project artifacts for the capstone project. |
 
 ---
